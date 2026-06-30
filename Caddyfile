@@ -1,0 +1,9 @@
+# Automatic HTTPS via Let's Encrypt. {$DOMAIN} and {$ACME_EMAIL} come from .env.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:3000
+}

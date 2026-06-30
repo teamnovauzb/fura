@@ -1,0 +1,118 @@
+// Fura — trucking payments & movements management
+// Money is ALWAYS Decimal(12,2). Never Float.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ADMIN)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // What this user created
+  trucksCreated       Truck[]       @relation("TruckCreatedBy")
+  driversCreated      Driver[]      @relation("DriverCreatedBy")
+  transactionsCreated Transaction[] @relation("TxnCreatedBy")
+  auditEntries        AuditLog[]
+
+  @@map("users")
+}
+
+model Truck {
+  id        String   @id @default(cuid())
+  name      String
+  plate     String?
+  // Default/base rate for this truck — Decimal, never float
+  price     Decimal  @db.Decimal(12, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation("TruckCreatedBy", fields: [createdById], references: [id])
+
+  transactions Transaction[]
+
+  @@map("trucks")
+}
+
+model Driver {
+  // Drivers do NOT log in — they are records staff pick from a list.
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation("DriverCreatedBy", fields: [createdById], references: [id])
+
+  transactions Transaction[]
+
+  @@map("drivers")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  // The movement: where the truck is going
+  origin      String?
+  destination String
+  // Money the driver was given for the trip
+  moneyGiven  Decimal  @db.Decimal(12, 2)
+  // Extra spending incurred on the way (fuel, repairs, tolls...)
+  extraSpending Decimal @db.Decimal(12, 2) @default(0)
+  // Revenue / agreed price for this movement (optional)
+  revenue     Decimal? @db.Decimal(12, 2)
+  notes       String?
+  movedAt     DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  truckId  String
+  truck    Truck  @relation(fields: [truckId], references: [id])
+  driverId String
+  driver   Driver @relation(fields: [driverId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("TxnCreatedBy", fields: [createdById], references: [id])
+
+  @@index([truckId])
+  @@index([driverId])
+  @@index([movedAt])
+  @@map("transactions")
+}
+
+model AuditLog {
+  // Append-only. The app NEVER updates or deletes rows here.
+  id        String   @id @default(cuid())
+  action    String   // CREATE | UPDATE | DELETE | LOGIN
+  entity    String   // Truck | Driver | Transaction | User
+  entityId  String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+  @@map("audit_log")
+}
