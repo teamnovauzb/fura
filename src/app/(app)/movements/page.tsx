@@ -57,7 +57,75 @@ export default async function MovementsPage() {
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-x-auto">
+        <>
+          {/* Mobile: cards */}
+          <div className="space-y-3 md:hidden">
+            {movements.map((m) => {
+              const net =
+                toNumber(m.revenue) -
+                toNumber(m.moneyGiven) -
+                toNumber(m.extraSpending);
+              return (
+                <div
+                  key={m.id}
+                  className="rounded-lg border border-border bg-card p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-600 truncate">
+                        {m.origin ? `${m.origin} → ` : ""}
+                        {m.destination}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {m.truck.name} · {m.driver.name}
+                      </p>
+                    </div>
+                    <span className="font-mono tnum text-xs text-muted-foreground shrink-0">
+                      {formatDate(m.movedAt)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm border-t border-border pt-3">
+                    <div>
+                      <p className="eyebrow !text-[0.6rem]">{t.movements.colGiven}</p>
+                      <p className="font-mono tnum mt-0.5">{money(m.moneyGiven)}</p>
+                    </div>
+                    <div>
+                      <p className="eyebrow !text-[0.6rem]">{t.movements.colSpent}</p>
+                      <p className="font-mono tnum mt-0.5 text-rust">
+                        {money(m.extraSpending)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="eyebrow !text-[0.6rem]">{t.movements.colNet}</p>
+                      <p
+                        className={`font-mono tnum mt-0.5 ${
+                          net > 0 ? "text-go" : net < 0 ? "text-rust" : ""
+                        }`}
+                      >
+                        {m.revenue == null ? t.common.dash : money(net)}
+                      </p>
+                    </div>
+                  </div>
+                  {superadmin && (
+                    <div className="flex justify-end gap-1 border-t border-border pt-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/movements/${m.id}/edit`}>
+                          {t.common.edit}
+                        </Link>
+                      </Button>
+                      <DeleteMovementButton
+                        id={m.id}
+                        label={`${m.destination} · ${money(m.moneyGiven)}`}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block rounded-lg border border-border bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -127,7 +195,8 @@ export default async function MovementsPage() {
               })}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

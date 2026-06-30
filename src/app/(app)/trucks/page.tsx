@@ -48,7 +48,54 @@ export default async function TrucksPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <>
+          {/* Mobile: cards */}
+          <div className="space-y-3 md:hidden">
+            {trucks.map((tr) => (
+              <div
+                key={tr.id}
+                className={`rounded-lg border border-border bg-card p-4 ${tr.active ? "" : "opacity-55"}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-600 flex items-center gap-2">
+                      {tr.name}
+                      {!tr.active && (
+                        <Badge variant="outline" className="text-rust border-rust/40">
+                          {t.trucks.retired}
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="font-mono uppercase text-xs text-muted-foreground mt-0.5">
+                      {tr.plate ?? t.common.dash}
+                    </p>
+                  </div>
+                  <span className="font-mono tnum font-700 shrink-0">
+                    {money(tr.price)}
+                  </span>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2 mt-3">
+                  <TruckDialog
+                    truck={{
+                      id: tr.id,
+                      name: tr.name,
+                      plate: tr.plate,
+                      price: tr.price.toString(),
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="sm">
+                        {t.common.edit}
+                      </Button>
+                    }
+                  />
+                  {superadmin && <ToggleTruckActive id={tr.id} active={tr.active} />}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block rounded-lg border border-border bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -105,7 +152,8 @@ export default async function TrucksPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

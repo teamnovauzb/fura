@@ -79,7 +79,7 @@ export default async function DashboardPage() {
           >
             <p className="eyebrow">{s.label}</p>
             <p
-              className={`mt-3 font-mono tnum text-2xl font-700 ${
+              className={`mt-3 font-mono tnum text-lg sm:text-2xl font-700 break-words leading-tight ${
                 s.tone === "rust"
                   ? "text-rust"
                   : s.tone === "go"
@@ -131,7 +131,35 @@ export default async function DashboardPage() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <>
+          {/* Mobile: compact rows */}
+          <div className="space-y-2 md:hidden">
+            {recent.map((m) => (
+              <div
+                key={m.id}
+                className="rounded-lg border border-border bg-card p-3 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-500 text-sm truncate">
+                    {m.origin ? `${m.origin} → ` : ""}
+                    {m.destination}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {m.truck.name} · {formatDate(m.movedAt)}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-mono tnum text-sm">{money(m.moneyGiven)}</p>
+                  <p className="font-mono tnum text-xs text-rust">
+                    {money(m.extraSpending)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block rounded-lg border border-border bg-card overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -166,6 +194,7 @@ export default async function DashboardPage() {
               </TableBody>
             </Table>
           </div>
+          </>
         )}
       </section>
     </div>

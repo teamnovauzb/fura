@@ -49,7 +49,49 @@ export default async function DriversPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <>
+          {/* Mobile: cards */}
+          <div className="space-y-3 md:hidden">
+            {drivers.map((d) => (
+              <div
+                key={d.id}
+                className={`rounded-lg border border-border bg-card p-4 ${d.active ? "" : "opacity-55"}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-600 flex items-center gap-2">
+                      {d.name}
+                      {!d.active && (
+                        <Badge variant="outline" className="text-rust border-rust/40">
+                          {t.drivers.inactive}
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground mt-0.5">
+                      {d.phone ?? t.common.dash}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {d._count.transactions} · {t.drivers.colTrips}
+                  </span>
+                </div>
+                <div className="flex justify-end gap-1 border-t border-border pt-2 mt-3">
+                  <DriverDialog
+                    driver={{ id: d.id, name: d.name, phone: d.phone }}
+                    trigger={
+                      <Button variant="ghost" size="sm">
+                        {t.common.edit}
+                      </Button>
+                    }
+                  />
+                  {superadmin && <ToggleDriverActive id={d.id} active={d.active} />}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block rounded-lg border border-border bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -101,7 +143,8 @@ export default async function DriversPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

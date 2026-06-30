@@ -39,7 +39,50 @@ export default async function StaffPage() {
 
       <div className="road-line" />
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      {/* Mobile: cards */}
+      <div className="space-y-3 md:hidden">
+        {users.map((u) => {
+          const isMe = u.id === me.id;
+          return (
+            <div
+              key={u.id}
+              className={`rounded-lg border border-border bg-card p-4 ${u.active ? "" : "opacity-55"}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-600 flex items-center gap-2">
+                    {u.name}
+                    {isMe && (
+                      <Badge variant="outline" className="text-xs">
+                        {t.common.you}
+                      </Badge>
+                    )}
+                  </p>
+                  <p className="font-mono text-xs text-muted-foreground mt-0.5 truncate">
+                    {u.email}
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`shrink-0 ${
+                    u.role === "SUPERADMIN"
+                      ? "border-amber text-amber-foreground bg-amber/10"
+                      : ""
+                  }`}
+                >
+                  {u.role === "SUPERADMIN" ? t.roles.superadmin : t.roles.admin}
+                </Badge>
+              </div>
+              <div className="flex justify-end border-t border-border pt-2 mt-3">
+                <ToggleUser id={u.id} active={u.active} disabled={isMe} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block rounded-lg border border-border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

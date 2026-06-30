@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requireUser, isSuperadmin } from "@/lib/guards";
 import { SidebarNav, type NavItem } from "@/components/sidebar-nav";
+import { MobileNav } from "@/components/mobile-nav";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { signOutAction } from "@/app/actions/session";
 import { Button } from "@/components/ui/button";
@@ -92,21 +92,9 @@ export default async function AppLayout({
         </header>
 
         {/* Mobile nav strip */}
-        <div className="md:hidden border-b border-border bg-card overflow-x-auto">
-          <div className="flex gap-1 px-2 py-2 min-w-max">
-            {items.map((i) => (
-              <Link
-                key={i.href}
-                href={i.href}
-                className="px-3 py-1.5 text-sm rounded-md hover:bg-accent whitespace-nowrap"
-              >
-                {i.label}
-              </Link>
-            ))}
-          </div>
-        </div>
+        <MobileNav items={items} />
 
-        <main className="flex-1 p-5 sm:p-8 max-w-6xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
           {children}
         </main>
       </div>
