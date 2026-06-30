@@ -1,11 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { locales, localeNames } from "@/i18n/config";
 import { useI18n } from "@/i18n/provider";
-import { setLocale } from "@/i18n/actions";
 
 export function LanguageSwitcher({
   className,
@@ -14,9 +11,7 @@ export function LanguageSwitcher({
   className?: string;
   variant?: "dark" | "light";
 }) {
-  const { locale } = useI18n();
-  const router = useRouter();
-  const [pending, start] = useTransition();
+  const { locale, setLocale } = useI18n();
 
   return (
     <div
@@ -32,13 +27,8 @@ export function LanguageSwitcher({
           <button
             key={l}
             type="button"
-            disabled={pending || active}
-            onClick={() =>
-              start(async () => {
-                await setLocale(l);
-                router.refresh();
-              })
-            }
+            disabled={active}
+            onClick={() => setLocale(l)}
             className={cn(
               "rounded px-2 py-1 text-xs font-600 font-mono uppercase tracking-wider transition-colors disabled:cursor-default",
               active
