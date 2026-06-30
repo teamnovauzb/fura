@@ -151,8 +151,22 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     font-feature-settings: "ss01", "cv01";
+    /* Soft blue gradient wash — keeps white cards popping */
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        900px 520px at 100% -10%,
+        oklch(0.6 0.16 258 / 0.13),
+        transparent 55%
+      ),
+      radial-gradient(
+        760px 520px at -5% 110%,
+        oklch(0.7 0.1 230 / 0.1),
+        transparent 55%
+      );
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
