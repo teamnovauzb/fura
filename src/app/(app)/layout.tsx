@@ -1,4 +1,5 @@
 import { requireUser, isSuperadmin } from "@/lib/guards";
+import { countDueReminders } from "@/lib/reminders";
 import { SidebarNav, type NavItem } from "@/components/sidebar-nav";
 import { MobileNav } from "@/components/mobile-nav";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -14,16 +15,24 @@ export default async function AppLayout({
   const user = await requireUser();
   const superadmin = isSuperadmin(user);
   const { t } = await getT();
+  const dueReminders = await countDueReminders();
 
   const items: NavItem[] = [
     { href: "/", label: t.nav.dashboard, code: "00" },
     { href: "/movements", label: t.nav.movements, code: "01" },
-    { href: "/trucks", label: t.nav.trucks, code: "02" },
-    { href: "/drivers", label: t.nav.drivers, code: "03" },
+    { href: "/finance", label: t.nav.finance, code: "02" },
+    { href: "/trucks", label: t.nav.trucks, code: "03" },
+    { href: "/drivers", label: t.nav.drivers, code: "04" },
+    {
+      href: "/reminders",
+      label: t.nav.reminders,
+      code: "05",
+      badge: dueReminders || undefined,
+    },
     ...(superadmin
       ? [
-          { href: "/staff", label: t.nav.staff, code: "04" },
-          { href: "/audit", label: t.nav.audit, code: "05" },
+          { href: "/staff", label: t.nav.staff, code: "06" },
+          { href: "/audit", label: t.nav.audit, code: "07" },
         ]
       : []),
   ];

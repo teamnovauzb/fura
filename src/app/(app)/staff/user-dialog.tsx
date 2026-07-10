@@ -56,9 +56,16 @@ export function UserDialog({ trigger }: { trigger: React.ReactNode }) {
             <FieldError message={state.fieldErrors?.name} />
           </div>
           <div>
-            <Label htmlFor="email">{t.staff.email}</Label>
-            <Input id="email" name="email" type="email" required />
-            <FieldError message={state.fieldErrors?.email} />
+            <Label htmlFor="login">{t.staff.login}</Label>
+            <Input
+              id="login"
+              name="login"
+              type="text"
+              autoComplete="off"
+              placeholder={t.staff.loginHint}
+              required
+            />
+            <FieldError message={state.fieldErrors?.login} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

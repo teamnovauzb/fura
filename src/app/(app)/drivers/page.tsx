@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { DriverDialog } from "./driver-dialog";
 import { ToggleDriverActive } from "./toggle-active";
+import { DeleteDriverButton } from "./delete-button";
 
 export default async function DriversPage() {
   const user = await requireUser();
@@ -85,6 +86,7 @@ export default async function DriversPage() {
                     }
                   />
                   {superadmin && <ToggleDriverActive id={d.id} active={d.active} />}
+                  {superadmin && <DeleteDriverButton id={d.id} name={d.name} />}
                 </div>
               </div>
             ))}
@@ -136,6 +138,9 @@ export default async function DriversPage() {
                       />
                       {superadmin && (
                         <ToggleDriverActive id={d.id} active={d.active} />
+                      )}
+                      {superadmin && (
+                        <DeleteDriverButton id={d.id} name={d.name} />
                       )}
                     </div>
                   </TableCell>

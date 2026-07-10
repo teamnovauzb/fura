@@ -13,15 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/provider";
-import { deleteTransaction } from "./actions";
+import { deleteTruck } from "./actions";
 
-export function DeleteMovementButton({
-  id,
-  label,
-}: {
-  id: string;
-  label: string;
-}) {
+export function DeleteTruckButton({ id, name }: { id: string; name: string }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -29,15 +23,15 @@ export function DeleteMovementButton({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-rust hover:text-rust">
+        <Button variant="ghost" size="sm" className="text-rust hover:text-rust">
           {t.common.delete}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t.movements.deleteTitle}</DialogTitle>
+          <DialogTitle>{t.trucks.deleteTitle}</DialogTitle>
           <DialogDescription>
-            {label}. {t.movements.deleteDesc}
+            {name}. {t.trucks.deleteDesc}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -49,10 +43,10 @@ export function DeleteMovementButton({
             disabled={pending}
             onClick={() =>
               start(async () => {
-                const res = await deleteTransaction(id);
+                const res = await deleteTruck(id);
                 if (res.error) toast.error(res.error);
                 else {
-                  toast.success(t.movements.toastDeleted);
+                  toast.success(t.trucks.toastDeleted);
                   setOpen(false);
                 }
               })

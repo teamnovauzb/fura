@@ -24,7 +24,7 @@ export default async function NewMovementPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <header>
         <p className="eyebrow">
           <Link href="/movements" className="hover:text-foreground">

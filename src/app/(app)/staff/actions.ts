@@ -34,7 +34,7 @@ export async function createUser(
 
   const parsed = newUserSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
+    login: formData.get("login"),
     password: formData.get("password"),
     role: formData.get("role"),
   });
@@ -43,17 +43,18 @@ export async function createUser(
     return { fieldErrors: fieldErrorsFrom(parsed.error, t.errors) };
   }
 
-  const { name, email, password, role } = parsed.data;
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const { name, login, password, role } = parsed.data;
+  // The `email` column doubles as the unique login identifier.
+  const existing = await prisma.user.findUnique({ where: { email: login } });
   if (existing) {
-    return { fieldErrors: { email: t.staff.emailTaken } };
+    return { fieldErrors: { login: t.staff.loginTaken } };
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
-      data: { name, email, passwordHash, role },
+      data: { name, email: login, passwordHash, role },
     });
     await writeAudit(tx, {
       userId: actor.id,

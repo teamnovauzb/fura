@@ -22,13 +22,18 @@ export function MobileNav({ items }: { items: NavItem[] }) {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "px-3 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors",
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors",
                 active
                   ? "bg-primary text-primary-foreground font-600"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               {item.label}
+              {item.badge ? (
+                <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-rust px-1 text-[0.65rem] font-700 tabular-nums text-white">
+                  {item.badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}

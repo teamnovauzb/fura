@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { SubmitButton, FieldError } from "@/components/form-bits";
 import { MoneyInput } from "@/components/money-input";
-import { money } from "@/lib/format";
+import { fmtMoney } from "@/lib/format";
 import { useI18n } from "@/i18n/provider";
 import type { ActionState } from "./actions";
 
@@ -55,6 +55,7 @@ export function MovementForm({
   const [given, setGiven] = useState(initial?.moneyGiven ?? "");
   const [extra, setExtra] = useState(initial?.extraSpending ?? "");
   const [revenue, setRevenue] = useState(initial?.revenue ?? "");
+  const [currency, setCurrency] = useState<"SOM" | "USD">("USD");
   const net =
     (Number(revenue) || 0) - (Number(given) || 0) - (Number(extra) || 0);
 
@@ -122,6 +123,23 @@ export function MovementForm({
 
       <div className="road-line" />
 
+      <div className="max-w-[12rem]">
+        <Label htmlFor="currency">{t.movements.currency}</Label>
+        <Select
+          name="currency"
+          value={currency}
+          onValueChange={(v) => setCurrency(v as "SOM" | "USD")}
+        >
+          <SelectTrigger id="currency" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="SOM">{t.movements.curSom}</SelectItem>
+            <SelectItem value="USD">{t.movements.curUsd}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid sm:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="moneyGiven">{t.movements.moneyGiven}</Label>
@@ -143,7 +161,6 @@ export function MovementForm({
             className="font-mono"
             defaultValue={initial?.extraSpending}
             onRaw={setExtra}
-            required
           />
           <FieldError message={state.fieldErrors?.extraSpending} />
         </div>
@@ -168,7 +185,7 @@ export function MovementForm({
             net > 0 ? "text-go" : net < 0 ? "text-rust" : "text-foreground"
           }`}
         >
-          {money(net)}
+          {fmtMoney(net, currency)}
         </span>
       </div>
 

@@ -116,3 +116,35 @@ export async function deactivateTruck(id: string): Promise<ActionState> {
   revalidatePath("/trucks");
   return { ok: true };
 }
+
+/**
+ * Permanently delete a truck — superadmin only. Blocked while the truck still
+ * has movements or reminders attached (those reference it); retire it instead.
+ */
+export async function deleteTruck(id: string): Promise<ActionState> {
+  const user = await assertSuperadmin();
+  const { t } = await getT();
+  const before = await prisma.truck.findUnique({
+    where: { id },
+    include: {
+      _count: { select: { transactions: true, reminders: true } },
+    },
+  });
+  if (!before) return { error: t.trucks.notFound };
+  if (before._count.transactions > 0 || before._count.reminders > 0)
+    return { error: t.trucks.inUse };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.truck.delete({ where: { id } });
+    await writeAudit(tx, {
+      userId: user.id,
+      action: "DELETE",
+      entity: "Truck",
+      entityId: id,
+      before,
+    });
+  });
+
+  revalidatePath("/trucks");
+  return { ok: true };
+}

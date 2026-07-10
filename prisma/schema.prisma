@@ -15,6 +15,40 @@ enum Role {
   ADMIN
 }
 
+enum ReminderStatus {
+  PENDING
+  DONE
+}
+
+// A movement is OPEN while it runs — staff keep adding received/spent entries.
+// Pressing "End" closes it: profit is locked in and the ledger is frozen.
+enum MovementStatus {
+  OPEN
+  ENDED
+}
+
+// Direction of a ledger entry, from the company's cash point of view.
+enum LedgerType {
+  RECEIVED
+  SPENT
+}
+
+// What a SPENT entry is for. GENERAL = ordinary trip cost. SALARY feeds staff
+// salary totals. CAR is money spent on the truck itself and is deducted from
+// the truck's value. (RECEIVED entries are always GENERAL.)
+enum ExpenseKind {
+  GENERAL
+  SALARY
+  CAR
+}
+
+// Payment currency. Amounts in different currencies are NEVER summed together
+// — every total is reported per-currency.
+enum Currency {
+  SOM
+  USD
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -29,6 +63,8 @@ model User {
   trucksCreated       Truck[]       @relation("TruckCreatedBy")
   driversCreated      Driver[]      @relation("DriverCreatedBy")
   transactionsCreated Transaction[] @relation("TxnCreatedBy")
+  remindersCreated    Reminder[]    @relation("ReminderCreatedBy")
+  ledgerEntries       LedgerEntry[] @relation("LedgerHandledBy")
   auditEntries        AuditLog[]
 
   @@map("users")
@@ -48,6 +84,7 @@ model Truck {
   createdBy   User   @relation("TruckCreatedBy", fields: [createdById], references: [id])
 
   transactions Transaction[]
+  reminders    Reminder[]
 
   @@map("trucks")
 }
@@ -81,6 +118,9 @@ model Transaction {
   // Revenue / agreed price for this movement (optional)
   revenue     Decimal? @db.Decimal(12, 2)
   notes       String?
+  // Lifecycle: OPEN while running (entries can be added), ENDED once closed.
+  status      MovementStatus @default(OPEN)
+  endedAt     DateTime?
   movedAt     DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -93,10 +133,89 @@ model Transaction {
   createdById String
   createdBy   User   @relation("TxnCreatedBy", fields: [createdById], references: [id])
 
+  trips   Trip[]
+  entries LedgerEntry[]
+
   @@index([truckId])
   @@index([driverId])
   @@index([movedAt])
+  @@index([status])
   @@map("transactions")
+}
+
+model Trip {
+  // One leg of a movement (log). A log can chain several legs, e.g.
+  // Namangan→Moscow, Moscow→Tashkent, Tashkent→Namangan. Each leg carries its
+  // own received/spent ledger entries; the log's profit sums across legs.
+  id          String   @id @default(cuid())
+  origin      String?
+  destination String
+  order       Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  entries LedgerEntry[]
+
+  @@index([transactionId])
+  @@map("trips")
+}
+
+model LedgerEntry {
+  // A single money line on a movement: money received or spent while the trip
+  // is open. The initial "money given" is seeded as the first SPENT entry.
+  id       String      @id @default(cuid())
+  type     LedgerType
+  kind     ExpenseKind @default(GENERAL)
+  currency Currency    @default(USD)
+  amount   Decimal     @db.Decimal(12, 2)
+  label    String?
+  // The day the money moved (defaults to now); kept for per-day ledgers.
+  at     DateTime   @default(now())
+  createdAt DateTime @default(now())
+
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  // Which leg of the log this entry belongs to (nullable for legacy rows).
+  tripId String?
+  trip   Trip?   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  // The staff member who handled this cash — drives the finance "who has how
+  // much" per-staff balances.
+  handledById String
+  handledBy   User   @relation("LedgerHandledBy", fields: [handledById], references: [id])
+
+  @@index([transactionId])
+  @@index([tripId])
+  @@index([handledById])
+  @@map("ledger_entries")
+}
+
+model Reminder {
+  // A dated reminder about a truck (insurance, tech inspection, document
+  // renewal…). When the day arrives ALL staff see it in-app (a bell badge +
+  // dashboard banner) and act on it, then reschedule or close.
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  // The day it becomes due. Date-only (no time) to avoid timezone drift.
+  dueDate     DateTime       @db.Date
+  status      ReminderStatus @default(PENDING)
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("ReminderCreatedBy", fields: [createdById], references: [id])
+
+  @@index([status, dueDate])
+  @@index([truckId])
+  @@map("reminders")
 }
 
 model AuditLog {

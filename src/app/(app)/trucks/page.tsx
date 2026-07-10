@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser, isSuperadmin } from "@/lib/guards";
-import { money, formatDate } from "@/lib/format";
+import { money, toNumber } from "@/lib/format";
+import { ledgerTotals, addPair, emptyPair, type Pair } from "@/lib/ledger";
+import { PairMoney } from "@/components/money-pair";
 import { getT } from "@/i18n/server";
 import { fmt } from "@/i18n/config";
 import { Button } from "@/components/ui/button";
@@ -8,13 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Link from "next/link";
 import { TruckDialog } from "./truck-dialog";
 import { ToggleTruckActive } from "./toggle-active";
+import { DeleteTruckButton } from "./delete-button";
+import { TruckRow } from "./truck-row";
 
 export default async function TrucksPage() {
   const user = await requireUser();
@@ -23,7 +27,38 @@ export default async function TrucksPage() {
 
   const trucks = await prisma.truck.findMany({
     orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+    include: {
+      transactions: {
+        select: {
+          moneyGiven: true,
+          extraSpending: true,
+          revenue: true,
+          entries: {
+            select: { type: true, amount: true, kind: true, currency: true },
+          },
+        },
+      },
+    },
   });
+
+  // Live truck value = base price + money spent on the truck − profit earned.
+  // The base price is in so'm; USD only appears via USD entries.
+  function currentValueOf(tr: (typeof trucks)[number]): Pair {
+    const carSpend = emptyPair();
+    let profit = emptyPair();
+    for (const m of tr.transactions) {
+      profit = addPair(profit, ledgerTotals(m).profit);
+      for (const e of m.entries)
+        if (e.type === "SPENT" && e.kind === "CAR") {
+          const cur: keyof Pair = e.currency === "USD" ? "USD" : "SOM";
+          carSpend[cur] += toNumber(e.amount);
+        }
+    }
+    return {
+      SOM: toNumber(tr.price) + carSpend.SOM - profit.SOM,
+      USD: carSpend.USD - profit.USD,
+    };
+  }
 
   return (
     <div className="space-y-6">
@@ -59,7 +94,9 @@ export default async function TrucksPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-600 flex items-center gap-2">
-                      {tr.name}
+                      <Link href={`/trucks/${tr.id}`} className="hover:underline">
+                        {tr.name}
+                      </Link>
                       {!tr.active && (
                         <Badge variant="outline" className="text-rust border-rust/40">
                           {t.trucks.retired}
@@ -70,9 +107,15 @@ export default async function TrucksPage() {
                       {tr.plate ?? t.common.dash}
                     </p>
                   </div>
-                  <span className="font-mono tnum font-700 shrink-0">
-                    {money(tr.price)}
-                  </span>
+                  <div className="text-right shrink-0">
+                    <PairMoney
+                      pair={currentValueOf(tr)}
+                      className="font-mono tnum font-700"
+                    />
+                    <p className="eyebrow !text-[0.55rem]">
+                      {t.trucks.currentValue}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-1 border-t border-border pt-2 mt-3">
                   <TruckDialog
@@ -89,6 +132,7 @@ export default async function TrucksPage() {
                     }
                   />
                   {superadmin && <ToggleTruckActive id={tr.id} active={tr.active} />}
+                  {superadmin && <DeleteTruckButton id={tr.id} name={tr.name} />}
                 </div>
               </div>
             ))}
@@ -102,53 +146,26 @@ export default async function TrucksPage() {
                 <TableHead>{t.trucks.title}</TableHead>
                 <TableHead>{t.trucks.colPlate}</TableHead>
                 <TableHead className="text-right">{t.trucks.colRate}</TableHead>
+                <TableHead className="text-right">
+                  {t.trucks.currentValue}
+                </TableHead>
                 <TableHead>{t.common.added}</TableHead>
                 <TableHead className="text-right">{t.common.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {trucks.map((tr) => (
-                <TableRow key={tr.id} className={tr.active ? "" : "opacity-55"}>
-                  <TableCell className="font-600">
-                    <span className="flex items-center gap-2">
-                      {tr.name}
-                      {!tr.active && (
-                        <Badge variant="outline" className="text-rust border-rust/40">
-                          {t.trucks.retired}
-                        </Badge>
-                      )}
-                    </span>
-                  </TableCell>
-                  <TableCell className="font-mono uppercase text-muted-foreground">
-                    {tr.plate ?? t.common.dash}
-                  </TableCell>
-                  <TableCell className="text-right font-mono tnum">
-                    {money(tr.price)}
-                  </TableCell>
-                  <TableCell className="font-mono tnum text-xs text-muted-foreground">
-                    {formatDate(tr.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <TruckDialog
-                        truck={{
-                          id: tr.id,
-                          name: tr.name,
-                          plate: tr.plate,
-                          price: tr.price.toString(),
-                        }}
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            {t.common.edit}
-                          </Button>
-                        }
-                      />
-                      {superadmin && (
-                        <ToggleTruckActive id={tr.id} active={tr.active} />
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TruckRow
+                  key={tr.id}
+                  id={tr.id}
+                  name={tr.name}
+                  plate={tr.plate}
+                  price={Number(tr.price)}
+                  currentValue={currentValueOf(tr)}
+                  createdAt={tr.createdAt.toISOString()}
+                  active={tr.active}
+                  superadmin={superadmin}
+                />
               ))}
             </TableBody>
           </Table>

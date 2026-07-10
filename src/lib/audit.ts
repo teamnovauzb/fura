@@ -5,7 +5,7 @@ type Tx = Prisma.TransactionClient | PrismaClient;
 export type AuditInput = {
   userId: string;
   action: "CREATE" | "UPDATE" | "DELETE" | "LOGIN";
-  entity: "Truck" | "Driver" | "Transaction" | "User";
+  entity: "Truck" | "Driver" | "Transaction" | "User" | "Reminder" | "LedgerEntry" | "Trip";
   entityId?: string | null;
   before?: unknown;
   after?: unknown;

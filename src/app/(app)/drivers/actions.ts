@@ -109,3 +109,32 @@ export async function deactivateDriver(id: string): Promise<ActionState> {
   revalidatePath("/drivers");
   return { ok: true };
 }
+
+/**
+ * Permanently delete a driver — superadmin only. Blocked while the driver
+ * still has movements attached; deactivate instead.
+ */
+export async function deleteDriver(id: string): Promise<ActionState> {
+  const user = await assertSuperadmin();
+  const { t } = await getT();
+  const before = await prisma.driver.findUnique({
+    where: { id },
+    include: { _count: { select: { transactions: true } } },
+  });
+  if (!before) return { error: t.drivers.notFound };
+  if (before._count.transactions > 0) return { error: t.drivers.inUse };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.driver.delete({ where: { id } });
+    await writeAudit(tx, {
+      userId: user.id,
+      action: "DELETE",
+      entity: "Driver",
+      entityId: id,
+      before,
+    });
+  });
+
+  revalidatePath("/drivers");
+  return { ok: true };
+}

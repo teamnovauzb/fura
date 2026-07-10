@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/guards";
-import { money, toNumber, formatDate } from "@/lib/format";
+import { money, toNumber, formatDate, formatDateOnly } from "@/lib/format";
+import { todayUtc } from "@/lib/reminders";
 import { getT } from "@/i18n/server";
 import { fmt } from "@/i18n/config";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -24,7 +26,7 @@ export default async function DashboardPage() {
   const { t } = await getT();
   const monthStart = startOfMonth();
 
-  const [trucks, drivers, monthAgg, recent] = await Promise.all([
+  const [trucks, drivers, monthAgg, recent, dueReminders] = await Promise.all([
     prisma.truck.count({ where: { active: true } }),
     prisma.driver.count({ where: { active: true } }),
     prisma.transaction.aggregate({
@@ -36,6 +38,12 @@ export default async function DashboardPage() {
       take: 8,
       orderBy: { movedAt: "desc" },
       include: { truck: true, driver: true },
+    }),
+    prisma.reminder.findMany({
+      where: { status: "PENDING", dueDate: { lte: todayUtc() } },
+      orderBy: { dueDate: "asc" },
+      take: 5,
+      include: { truck: { select: { name: true } } },
     }),
   ]);
 
@@ -69,6 +77,45 @@ export default async function DashboardPage() {
       </header>
 
       <div className="road-line" />
+
+      {/* Due reminders — every staff member sees these until handled */}
+      {dueReminders.length > 0 && (
+        <section className="rounded-lg border border-amber/50 bg-amber/5 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="eyebrow flex items-center gap-2 text-amber">
+              {t.reminders.bannerTitle}
+              <Badge className="bg-amber text-amber-foreground">
+                {dueReminders.length}
+              </Badge>
+            </p>
+            <Link
+              href="/reminders"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              {t.reminders.bannerLink}
+            </Link>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {dueReminders.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-2 text-sm"
+              >
+                <span className="font-500">
+                  {r.title}
+                  <span className="text-muted-foreground font-400">
+                    {" "}
+                    · {r.truck.name}
+                  </span>
+                </span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {formatDateOnly(r.dueDate)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* KPI board */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -8,6 +8,7 @@ export type NavItem = {
   href: string;
   label: string;
   code: string; // mono "manifest code" shown like a dispatch board
+  badge?: number; // e.g. count of due reminders — shown as a red pill
 };
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
@@ -42,6 +43,11 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
               {item.code}
             </span>
             <span className="font-500">{item.label}</span>
+            {item.badge ? (
+              <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-rust px-1.5 text-[0.7rem] font-700 tabular-nums text-white">
+                {item.badge}
+              </span>
+            ) : null}
           </Link>
         );
       })}

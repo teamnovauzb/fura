@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser, isSuperadmin } from "@/lib/guards";
-import { money, toNumber, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { ledgerTotals } from "@/lib/ledger";
+import { PairMoney } from "@/components/money-pair";
 import { getT } from "@/i18n/server";
 import { fmt } from "@/i18n/config";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MovementRow } from "./movement-row";
 import { DeleteMovementButton } from "./delete-button";
 
 export default async function MovementsPage() {
@@ -22,7 +25,11 @@ export default async function MovementsPage() {
 
   const movements = await prisma.transaction.findMany({
     orderBy: { movedAt: "desc" },
-    include: { truck: true, driver: true, createdBy: { select: { name: true } } },
+    include: {
+      truck: true,
+      driver: true,
+      entries: { select: { type: true, amount: true, currency: true } },
+    },
     take: 200,
   });
 
@@ -61,14 +68,16 @@ export default async function MovementsPage() {
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
             {movements.map((m) => {
-              const net =
-                toNumber(m.revenue) -
-                toNumber(m.moneyGiven) -
-                toNumber(m.extraSpending);
+              const { received, spent, profit } = ledgerTotals(m);
+              const ended = m.status === "ENDED";
               return (
                 <div
                   key={m.id}
-                  className="rounded-lg border border-border bg-card p-4 space-y-3"
+                  className="rounded-lg border border-border bg-card"
+                >
+                <Link
+                  href={`/movements/${m.id}`}
+                  className="block p-4 space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -80,45 +89,49 @@ export default async function MovementsPage() {
                         {m.truck.name} · {m.driver.name}
                       </p>
                     </div>
-                    <span className="font-mono tnum text-xs text-muted-foreground shrink-0">
-                      {formatDate(m.movedAt)}
-                    </span>
+                    <Badge variant={ended ? "secondary" : "default"}>
+                      {ended ? t.movements.statusEnded : t.movements.statusOpen}
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm border-t border-border pt-3">
                     <div>
-                      <p className="eyebrow !text-[0.6rem]">{t.movements.colGiven}</p>
-                      <p className="font-mono tnum mt-0.5">{money(m.moneyGiven)}</p>
-                    </div>
-                    <div>
-                      <p className="eyebrow !text-[0.6rem]">{t.movements.colSpent}</p>
-                      <p className="font-mono tnum mt-0.5 text-rust">
-                        {money(m.extraSpending)}
+                      <p className="eyebrow !text-[0.6rem]">
+                        {t.movements.received}
                       </p>
-                    </div>
-                    <div>
-                      <p className="eyebrow !text-[0.6rem]">{t.movements.colNet}</p>
-                      <p
-                        className={`font-mono tnum mt-0.5 ${
-                          net > 0 ? "text-go" : net < 0 ? "text-rust" : ""
-                        }`}
-                      >
-                        {m.revenue == null ? t.common.dash : money(net)}
-                      </p>
-                    </div>
-                  </div>
-                  {superadmin && (
-                    <div className="flex justify-end gap-1 border-t border-border pt-2">
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/movements/${m.id}/edit`}>
-                          {t.common.edit}
-                        </Link>
-                      </Button>
-                      <DeleteMovementButton
-                        id={m.id}
-                        label={`${m.destination} · ${money(m.moneyGiven)}`}
+                      <PairMoney
+                        pair={received}
+                        className="font-mono tnum mt-0.5 text-go"
                       />
                     </div>
-                  )}
+                    <div>
+                      <p className="eyebrow !text-[0.6rem]">
+                        {t.movements.spent}
+                      </p>
+                      <PairMoney
+                        pair={spent}
+                        className="font-mono tnum mt-0.5 text-rust"
+                      />
+                    </div>
+                    <div>
+                      <p className="eyebrow !text-[0.6rem]">
+                        {t.movements.profit}
+                      </p>
+                      <PairMoney
+                        pair={profit}
+                        colored
+                        className="font-mono tnum mt-0.5"
+                      />
+                    </div>
+                  </div>
+                </Link>
+                {superadmin && (
+                  <div className="flex justify-end border-t border-border px-4 py-2">
+                    <DeleteMovementButton
+                      id={m.id}
+                      label={`${m.origin ? `${m.origin} → ` : ""}${m.destination}`}
+                    />
+                  </div>
+                )}
                 </div>
               );
             })}
@@ -126,75 +139,51 @@ export default async function MovementsPage() {
 
           {/* Desktop: table */}
           <div className="hidden md:block rounded-lg border border-border bg-card overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.common.date}</TableHead>
-                <TableHead>{t.movements.colRoute}</TableHead>
-                <TableHead>{t.movements.colTruck}</TableHead>
-                <TableHead>{t.movements.colDriver}</TableHead>
-                <TableHead className="text-right">{t.movements.colGiven}</TableHead>
-                <TableHead className="text-right">{t.movements.colSpent}</TableHead>
-                <TableHead className="text-right">{t.movements.colNet}</TableHead>
-                {superadmin && (
-                  <TableHead className="text-right">{t.common.actions}</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {movements.map((m) => {
-                const net =
-                  toNumber(m.revenue) -
-                  toNumber(m.moneyGiven) -
-                  toNumber(m.extraSpending);
-                return (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-mono tnum text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(m.movedAt)}
-                    </TableCell>
-                    <TableCell className="font-500 whitespace-nowrap">
-                      {m.origin ? `${m.origin} → ` : ""}
-                      {m.destination}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">
-                      {m.truck.name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">
-                      {m.driver.name}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tnum whitespace-nowrap">
-                      {money(m.moneyGiven)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tnum text-rust whitespace-nowrap">
-                      {money(m.extraSpending)}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-mono tnum whitespace-nowrap ${
-                        net > 0 ? "text-go" : net < 0 ? "text-rust" : ""
-                      }`}
-                    >
-                      {m.revenue == null ? t.common.dash : money(net)}
-                    </TableCell>
-                    {superadmin && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={`/movements/${m.id}/edit`}>
-                              {t.common.edit}
-                            </Link>
-                          </Button>
-                          <DeleteMovementButton
-                            id={m.id}
-                            label={`${m.destination} · ${money(m.moneyGiven)}`}
-                          />
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t.common.date}</TableHead>
+                  <TableHead>{t.movements.colRoute}</TableHead>
+                  <TableHead>{t.movements.colTruck}</TableHead>
+                  <TableHead>{t.movements.colDriver}</TableHead>
+                  <TableHead className="text-right">
+                    {t.movements.received}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t.movements.spent}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t.movements.profit}
+                  </TableHead>
+                  <TableHead>{t.movements.colStatus}</TableHead>
+                  {superadmin && (
+                    <TableHead className="text-right">
+                      {t.common.actions}
+                    </TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {movements.map((m) => {
+                  const { received, spent, profit } = ledgerTotals(m);
+                  return (
+                    <MovementRow
+                      key={m.id}
+                      id={m.id}
+                      dateStr={formatDate(m.movedAt)}
+                      route={`${m.origin ? `${m.origin} → ` : ""}${m.destination}`}
+                      truck={m.truck.name}
+                      driver={m.driver.name}
+                      received={received}
+                      spent={spent}
+                      profit={profit}
+                      ended={m.status === "ENDED"}
+                      superadmin={superadmin}
+                    />
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </>
       )}

@@ -33,7 +33,7 @@ export default async function EditMovementPage({
   const updateAction = updateTransaction.bind(null, id);
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <header>
         <p className="eyebrow">
           <Link href="/movements" className="hover:text-foreground">
