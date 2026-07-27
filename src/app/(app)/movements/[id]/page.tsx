@@ -51,6 +51,8 @@ export default async function MovementDetailPage({
       currency: e.currency,
       amount: toNumber(e.amount),
       label: e.label,
+      imageName: e.imageName,
+      hasImage: Boolean(e.imagePath),
       at: e.at.toISOString().slice(0, 10),
       handledBy: e.handledBy.name,
     })),

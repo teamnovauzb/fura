@@ -8,6 +8,12 @@ import { writeAudit } from "@/lib/audit";
 import { transactionSchema, ledgerEntrySchema } from "@/lib/validation";
 import { fieldErrorsFrom } from "@/lib/forms";
 import { getT } from "@/i18n/server";
+import {
+  removeLedgerImage,
+  storeLedgerImage,
+  type StoredLedgerImage,
+} from "@/lib/ledger-images";
+import { notifyOtherUsers } from "@/lib/notifications";
 
 export type ActionState = {
   ok?: boolean;
@@ -50,20 +56,51 @@ export async function createTransaction(
   formData: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  const { t } = await getT();
   const parsed = parse(formData);
   if (!parsed.success) {
-    const { t } = await getT();
     return { fieldErrors: fieldErrorsFrom(parsed.error, t.errors) };
   }
 
   const d = parsed.data;
   const at = d.movedAt ? new Date(d.movedAt) : new Date();
 
+  const seedImages: Record<"moneyGiven" | "extraSpending" | "revenue", StoredLedgerImage | null> = {
+    moneyGiven: null,
+    extraSpending: null,
+    revenue: null,
+  };
+  const imageSpecs = [
+    { key: "moneyGiven" as const, field: "moneyGivenImage", amount: d.moneyGiven },
+    { key: "extraSpending" as const, field: "extraSpendingImage", amount: d.extraSpending },
+    { key: "revenue" as const, field: "revenueImage", amount: d.revenue ?? 0 },
+  ];
+
+  for (const spec of imageSpecs) {
+    let upload: Awaited<ReturnType<typeof storeLedgerImage>>;
+    try {
+      upload = await storeLedgerImage(formData.get(spec.field));
+    } catch {
+      await Promise.all(Object.values(seedImages).map((image) => removeLedgerImage(image?.imagePath)));
+      return { error: t.movements.imageSaveFailed };
+    }
+    if (upload.error || (upload.image && spec.amount <= 0)) {
+      await removeLedgerImage(upload.image?.imagePath);
+      await Promise.all(Object.values(seedImages).map((image) => removeLedgerImage(image?.imagePath)));
+      if (upload.error === "tooLarge") return { error: t.movements.imageTooLarge };
+      if (upload.error === "invalid") return { error: t.movements.imageInvalid };
+      return { error: t.movements.imageNeedsAmount };
+    }
+    seedImages[spec.key] = upload.image;
+  }
+
   // The movement opens as a live ledger. The amounts entered on the form are
   // seeded as its first entries: money given + extra are SPENT, revenue (if
   // any) is RECEIVED. Staff keep adding entries on the detail page until they
   // press End.
-  const newId = await prisma.$transaction(async (tx) => {
+  let newId: string;
+  try {
+    newId = await prisma.$transaction(async (tx) => {
     const txn = await tx.transaction.create({
       data: { ...toData(d), createdById: user.id },
     });
@@ -78,14 +115,18 @@ export async function createTransaction(
       },
     });
 
-    const seeds: { type: "RECEIVED" | "SPENT"; amount: number; label: string }[] =
-      [];
+    const seeds: {
+      type: "RECEIVED" | "SPENT";
+      amount: number;
+      label: string;
+      image: StoredLedgerImage | null;
+    }[] = [];
     if (d.moneyGiven > 0)
-      seeds.push({ type: "SPENT", amount: d.moneyGiven, label: "Money given" });
+      seeds.push({ type: "SPENT", amount: d.moneyGiven, label: "Money given", image: seedImages.moneyGiven });
     if (d.extraSpending > 0)
-      seeds.push({ type: "SPENT", amount: d.extraSpending, label: "Extra on the road" });
+      seeds.push({ type: "SPENT", amount: d.extraSpending, label: "Extra on the road", image: seedImages.extraSpending });
     if (d.revenue != null)
-      seeds.push({ type: "RECEIVED", amount: d.revenue, label: "Revenue" });
+      seeds.push({ type: "RECEIVED", amount: d.revenue, label: "Revenue", image: seedImages.revenue });
 
     if (seeds.length > 0)
       await tx.ledgerEntry.createMany({
@@ -98,6 +139,7 @@ export async function createTransaction(
           label: s.label,
           at,
           handledById: user.id,
+          ...s.image,
         })),
       });
 
@@ -108,11 +150,22 @@ export async function createTransaction(
       entityId: txn.id,
       after: txn,
     });
-    return txn.id;
-  });
+    await notifyOtherUsers(tx, {
+      actorId: user.id,
+      type: "MOVEMENT_CREATED",
+      subject: `${d.origin ? `${d.origin} → ` : ""}${d.destination}`,
+      href: `/movements/${txn.id}`,
+    });
+      return txn.id;
+    });
+  } catch {
+    await Promise.all(Object.values(seedImages).map((image) => removeLedgerImage(image?.imagePath)));
+    return { error: t.movements.imageSaveFailed };
+  }
 
   revalidatePath("/movements");
   revalidatePath("/finance");
+  revalidatePath("/som-kassa");
   revalidatePath("/");
   redirect(`/movements/${newId}`);
 }
@@ -160,6 +213,11 @@ export async function deleteTransaction(id: string): Promise<ActionState> {
   const before = await prisma.transaction.findUnique({ where: { id } });
   if (!before) return { error: t.movements.notFound };
 
+  const images = await prisma.ledgerEntry.findMany({
+    where: { transactionId: id },
+    select: { imagePath: true },
+  });
+
   await prisma.$transaction(async (tx) => {
     await tx.transaction.delete({ where: { id } });
     await writeAudit(tx, {
@@ -171,8 +229,11 @@ export async function deleteTransaction(id: string): Promise<ActionState> {
     });
   });
 
+  await Promise.all(images.map((entry) => removeLedgerImage(entry.imagePath)));
+
   revalidatePath("/movements");
   revalidatePath("/finance");
+  revalidatePath("/som-kassa");
   revalidatePath("/");
   return { ok: true };
 }
@@ -181,6 +242,7 @@ function revalidateMovement(id: string) {
   revalidatePath(`/movements/${id}`);
   revalidatePath("/movements");
   revalidatePath("/finance");
+  revalidatePath("/som-kassa");
   revalidatePath("/");
 }
 
@@ -216,31 +278,52 @@ export async function addLedgerEntry(
   if (trip.transaction.status === "ENDED" && user.role !== "SUPERADMIN")
     return { error: t.movements.endedLocked };
 
+  let upload: Awaited<ReturnType<typeof storeLedgerImage>>;
+  try {
+    upload = await storeLedgerImage(formData.get("image"));
+  } catch {
+    return { error: t.movements.imageSaveFailed };
+  }
+  if (upload.error === "tooLarge") return { error: t.movements.imageTooLarge };
+  if (upload.error === "invalid") return { error: t.movements.imageInvalid };
+
   const { type, amount, label, at, currency } = parsed.data;
   // Categories only apply to money spent; income is always general.
   const kind = type === "SPENT" ? parsed.data.kind : "GENERAL";
-  await prisma.$transaction(async (tx) => {
-    const entry = await tx.ledgerEntry.create({
-      data: {
-        transactionId: trip.transactionId,
-        tripId,
-        type,
-        kind,
-        currency,
-        amount,
-        label: label || null,
-        at: at ? new Date(at) : new Date(),
-        handledById: user.id,
-      },
+  try {
+    await prisma.$transaction(async (tx) => {
+      const entry = await tx.ledgerEntry.create({
+        data: {
+          transactionId: trip.transactionId,
+          tripId,
+          type,
+          kind,
+          currency,
+          amount,
+          label: label || null,
+          at: at ? new Date(at) : new Date(),
+          handledById: user.id,
+          ...upload.image,
+        },
+      });
+      await writeAudit(tx, {
+        userId: user.id,
+        action: "CREATE",
+        entity: "LedgerEntry",
+        entityId: entry.id,
+        after: entry,
+      });
+      await notifyOtherUsers(tx, {
+        actorId: user.id,
+        type: "LEDGER_ENTRY_CREATED",
+        subject: `${label || type} · ${amount} ${currency}`,
+        href: `/movements/${trip.transactionId}`,
+      });
     });
-    await writeAudit(tx, {
-      userId: user.id,
-      action: "CREATE",
-      entity: "LedgerEntry",
-      entityId: entry.id,
-      after: entry,
-    });
-  });
+  } catch {
+    await removeLedgerImage(upload.image?.imagePath);
+    return { error: t.movements.imageSaveFailed };
+  }
 
   revalidateMovement(trip.transactionId);
   return { ok: true };
@@ -301,6 +384,11 @@ export async function deleteTrip(tripId: string): Promise<ActionState> {
   });
   if (!before) return { error: t.movements.notFound };
 
+  const images = await prisma.ledgerEntry.findMany({
+    where: { tripId },
+    select: { imagePath: true },
+  });
+
   await prisma.$transaction(async (tx) => {
     await tx.trip.delete({ where: { id: tripId } });
     await writeAudit(tx, {
@@ -311,6 +399,8 @@ export async function deleteTrip(tripId: string): Promise<ActionState> {
       before,
     });
   });
+
+  await Promise.all(images.map((entry) => removeLedgerImage(entry.imagePath)));
 
   revalidateMovement(before.transactionId);
   return { ok: true };
@@ -339,6 +429,8 @@ export async function deleteLedgerEntry(entryId: string): Promise<ActionState> {
       before,
     });
   });
+
+  await removeLedgerImage(before.imagePath);
 
   revalidateMovement(before.transaction.id);
   return { ok: true };
@@ -373,29 +465,47 @@ export async function editLedgerEntry(
   });
   if (!before) return { error: t.movements.notFound };
 
+  let upload: Awaited<ReturnType<typeof storeLedgerImage>>;
+  try {
+    upload = await storeLedgerImage(formData.get("image"));
+  } catch {
+    return { error: t.movements.imageSaveFailed };
+  }
+  if (upload.error === "tooLarge") return { error: t.movements.imageTooLarge };
+  if (upload.error === "invalid") return { error: t.movements.imageInvalid };
+
   const { type, amount, label, at, currency } = parsed.data;
   const kind = type === "SPENT" ? parsed.data.kind : "GENERAL";
-  await prisma.$transaction(async (tx) => {
-    const after = await tx.ledgerEntry.update({
-      where: { id: entryId },
-      data: {
-        type,
-        kind,
-        currency,
-        amount,
-        label: label || null,
-        at: at ? new Date(at) : before.at,
-      },
+  try {
+    await prisma.$transaction(async (tx) => {
+      const after = await tx.ledgerEntry.update({
+        where: { id: entryId },
+        data: {
+          type,
+          kind,
+          currency,
+          amount,
+          label: label || null,
+          at: at ? new Date(at) : before.at,
+          ...(upload.image ?? {}),
+        },
+      });
+      await writeAudit(tx, {
+        userId: user.id,
+        action: "UPDATE",
+        entity: "LedgerEntry",
+        entityId: entryId,
+        before,
+        after,
+      });
     });
-    await writeAudit(tx, {
-      userId: user.id,
-      action: "UPDATE",
-      entity: "LedgerEntry",
-      entityId: entryId,
-      before,
-      after,
-    });
-  });
+  } catch {
+    await removeLedgerImage(upload.image?.imagePath);
+    return { error: t.movements.imageSaveFailed };
+  }
+
+  if (upload.image && before.imagePath !== upload.image.imagePath)
+    await removeLedgerImage(before.imagePath);
 
   revalidateMovement(before.transaction.id);
   return { ok: true };

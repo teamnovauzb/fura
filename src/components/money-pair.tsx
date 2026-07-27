@@ -5,8 +5,8 @@ export type Pair = { SOM: number; USD: number };
 /**
  * Render an amount that may exist in two currencies. so'm and $ are shown on
  * separate lines and never summed. A currency line is hidden when it's zero,
- * except we always show at least the so'm line so a truly-empty value reads
- * "0 so'm" rather than blank.
+ * except we always show at least the USD line so a truly-empty value reads
+ * "0 $" rather than blank.
  */
 export function PairMoney({
   pair,

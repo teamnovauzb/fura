@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { driverSchema } from "@/lib/validation";
 import { fieldErrorsFrom } from "@/lib/forms";
 import { getT } from "@/i18n/server";
+import { notifyOtherUsers } from "@/lib/notifications";
 
 export type ActionState = {
   ok?: boolean;
@@ -43,6 +44,12 @@ export async function createDriver(
       entity: "Driver",
       entityId: driver.id,
       after: driver,
+    });
+    await notifyOtherUsers(tx, {
+      actorId: user.id,
+      type: "DRIVER_CREATED",
+      subject: driver.name,
+      href: "/drivers",
     });
   });
 

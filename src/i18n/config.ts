@@ -1,4 +1,4 @@
-export const locales = ["uz", "en"] as const;
+export const locales = ["uz", "en", "ru"] as const;
 export type Locale = (typeof locales)[number];
 
 export const defaultLocale: Locale = "uz";
@@ -7,6 +7,7 @@ export const LOCALE_COOKIE = "lang";
 export const localeNames: Record<Locale, string> = {
   uz: "Ўзбекча",
   en: "English",
+  ru: "Русский",
 };
 
 export function isLocale(value: unknown): value is Locale {

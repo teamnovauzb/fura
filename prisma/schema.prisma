@@ -66,6 +66,8 @@ model User {
   remindersCreated    Reminder[]    @relation("ReminderCreatedBy")
   ledgerEntries       LedgerEntry[] @relation("LedgerHandledBy")
   auditEntries        AuditLog[]
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsSent     Notification[] @relation("NotificationActor")
 
   @@map("users")
 }
@@ -171,6 +173,11 @@ model LedgerEntry {
   currency Currency    @default(USD)
   amount   Decimal     @db.Decimal(12, 2)
   label    String?
+  // Optional receipt/photo stored on this server. Only the generated basename
+  // is persisted; files are served through an authenticated route.
+  imagePath String?
+  imageName String?
+  imageMime String?
   // The day the money moved (defaults to now); kept for per-day ledgers.
   at     DateTime   @default(now())
   createdAt DateTime @default(now())
@@ -234,4 +241,22 @@ model AuditLog {
   @@index([createdAt])
   @@index([entity, entityId])
   @@map("audit_log")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  type      String
+  subject   String
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  recipientId String
+  recipient   User @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  actorId String
+  actor   User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt, createdAt])
+  @@map("notifications")
 }

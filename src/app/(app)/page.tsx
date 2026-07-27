@@ -7,6 +7,7 @@ import { getT } from "@/i18n/server";
 import { fmt } from "@/i18n/config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArrowRight, BanknoteArrowDown, CircleDollarSign, Plus, Route, Truck, UsersRound, WalletCards } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -52,35 +53,33 @@ export default async function DashboardPage() {
   const revenue = toNumber(monthAgg._sum.revenue);
 
   const stats = [
-    { label: t.dashboard.tripsThisMonth, value: String(monthAgg._count) },
-    { label: t.dashboard.moneyGivenOut, value: money(given) },
-    { label: t.dashboard.extraOnRoad, value: money(spent), tone: "rust" as const },
-    { label: t.dashboard.revenueLogged, value: money(revenue), tone: "go" as const },
+    { label: t.dashboard.tripsThisMonth, value: String(monthAgg._count), icon: Route },
+    { label: t.dashboard.moneyGivenOut, value: money(given), icon: WalletCards },
+    { label: t.dashboard.extraOnRoad, value: money(spent), tone: "rust" as const, icon: BanknoteArrowDown },
+    { label: t.dashboard.revenueLogged, value: money(revenue), tone: "go" as const, icon: CircleDollarSign },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 lg:space-y-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">
             {t.dashboard.overview} · {formatDate(monthStart)} →
           </p>
-          <h1 className="text-3xl font-800 mt-1">
+          <h1 className="page-title">
             {fmt(t.dashboard.hi, {
               name: (user.name ?? "").split(" ")[0] || (user.email ?? ""),
             })}
           </h1>
         </div>
-        <Button asChild>
-          <Link href="/movements/new">{t.dashboard.logMovement}</Link>
+        <Button asChild size="lg">
+          <Link href="/movements/new"><Plus className="size-4" />{t.dashboard.logMovement}</Link>
         </Button>
       </header>
 
-      <div className="road-line" />
-
       {/* Due reminders — every staff member sees these until handled */}
       {dueReminders.length > 0 && (
-        <section className="rounded-lg border border-amber/50 bg-amber/5 p-5">
+        <section className="surface border-amber/30 bg-amber/5 p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="eyebrow flex items-center gap-2 text-amber">
               {t.reminders.bannerTitle}
@@ -118,15 +117,18 @@ export default async function DashboardPage() {
       )}
 
       {/* KPI board */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-lg border border-border bg-card p-5"
+            className="surface relative overflow-hidden p-5 sm:p-6"
           >
-            <p className="eyebrow">{s.label}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="eyebrow">{s.label}</p>
+              <span className="grid size-10 place-items-center rounded-xl bg-primary/8 text-primary"><s.icon className="size-[18px]" /></span>
+            </div>
             <p
-              className={`mt-3 font-mono tnum text-lg sm:text-2xl font-700 break-words leading-tight ${
+              className={`mt-5 font-mono tnum text-2xl font-700 break-words leading-tight tracking-tight ${
                 s.tone === "rust"
                   ? "text-rust"
                   : s.tone === "go"
@@ -144,17 +146,15 @@ export default async function DashboardPage() {
       <section className="grid sm:grid-cols-2 gap-4">
         <Link
           href="/trucks"
-          className="rounded-lg border border-border bg-card p-5 hover:border-amber transition-colors"
+          className="surface group p-5 sm:p-6 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
         >
-          <p className="eyebrow">{t.dashboard.activeTrucks}</p>
-          <p className="mt-2 font-mono tnum text-3xl font-700">{trucks}</p>
+          <div className="flex items-start justify-between"><div><p className="eyebrow">{t.dashboard.activeTrucks}</p><p className="mt-3 font-mono tnum text-3xl font-700">{trucks}</p></div><span className="grid size-11 place-items-center rounded-xl bg-primary/8 text-primary"><Truck className="size-5" /></span></div>
         </Link>
         <Link
           href="/drivers"
-          className="rounded-lg border border-border bg-card p-5 hover:border-amber transition-colors"
+          className="surface group p-5 sm:p-6 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
         >
-          <p className="eyebrow">{t.dashboard.activeDrivers}</p>
-          <p className="mt-2 font-mono tnum text-3xl font-700">{drivers}</p>
+          <div className="flex items-start justify-between"><div><p className="eyebrow">{t.dashboard.activeDrivers}</p><p className="mt-3 font-mono tnum text-3xl font-700">{drivers}</p></div><span className="grid size-11 place-items-center rounded-xl bg-primary/8 text-primary"><UsersRound className="size-5" /></span></div>
         </Link>
       </section>
 
@@ -162,8 +162,8 @@ export default async function DashboardPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-700">{t.dashboard.recentMovements}</h2>
-          <Link href="/movements" className="text-sm text-muted-foreground hover:text-foreground">
-            {t.dashboard.viewAll}
+          <Link href="/movements" className="inline-flex items-center gap-1.5 text-sm font-600 text-primary hover:text-primary/80">
+            {t.dashboard.viewAll}<ArrowRight className="size-4" />
           </Link>
         </div>
 
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Desktop: table */}
-          <div className="hidden md:block rounded-lg border border-border bg-card overflow-hidden">
+          <div className="hidden md:block surface overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>

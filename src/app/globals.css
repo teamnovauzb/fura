@@ -64,6 +64,7 @@
   body {
     @apply text-foreground;
     font-feature-settings: "ss01", "cv01";
+    letter-spacing: -0.01em;
   }
   html {
     @apply font-sans;
@@ -121,4 +122,12 @@
     font-weight: 600;
     color: var(--muted-foreground);
   }
+  .surface {
+    @apply rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_oklch(0.2_0.03_260/0.04),0_12px_32px_oklch(0.2_0.03_260/0.04)];
+  }
+  .page-title {
+    @apply mt-1 text-3xl font-extrabold tracking-[-0.035em] sm:text-4xl;
+  }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
 }

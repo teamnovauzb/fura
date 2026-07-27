@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import Image from "next/image";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ArrowDownLeft, ArrowUpRight, Plus } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ImageIcon, Paperclip, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,8 @@ export type LedgerEntryView = {
   currency: Currency;
   amount: number;
   label: string | null;
+  imageName: string | null;
+  hasImage: boolean;
   at: string; // yyyy-mm-dd
   handledBy: string;
 };
@@ -69,6 +72,78 @@ function totals(entries: LedgerEntryView[]) {
 
 const routeOf = (t: TripView) =>
   t.origin ? `${t.origin} → ${t.destination}` : t.destination;
+
+function SelectedImagePreview({ file, label }: { file: File; label: string }) {
+  const [url] = useState(() => URL.createObjectURL(file));
+
+  useEffect(() => {
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [url]);
+
+  return (
+    <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-2">
+      <Image
+        src={url}
+        alt={label}
+        width={112}
+        height={80}
+        unoptimized
+        className="h-20 w-28 rounded-lg object-cover"
+      />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-600">{file.name}</p>
+        <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+      </div>
+    </div>
+  );
+}
+
+function LedgerImagePreview({ entryId, imageName }: { entryId: string; imageName: string | null }) {
+  const { t } = useI18n();
+  const src = `/api/ledger-images/${entryId}`;
+  const alt = imageName ?? t.movements.viewImage;
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="group mt-2 flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-1.5 pr-3 text-xs font-600 text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
+          title={alt}
+        >
+          <Image
+            src={src}
+            alt={alt}
+            width={72}
+            height={52}
+            unoptimized
+            className="h-12 w-16 rounded-md object-cover ring-1 ring-black/5"
+          />
+          <span className="inline-flex items-center gap-1">
+            <Paperclip className="size-3.5" />
+            {t.movements.viewImage}
+          </span>
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-5xl bg-black/95 p-3 ring-white/10">
+        <DialogTitle className="sr-only">{alt}</DialogTitle>
+        <div className="flex max-h-[82vh] min-h-40 items-center justify-center overflow-hidden rounded-lg">
+          <Image
+            src={src}
+            alt={alt}
+            width={1800}
+            height={1400}
+            unoptimized
+            className="max-h-[82vh] h-auto w-auto max-w-full object-contain"
+          />
+        </div>
+        {imageName && <p className="truncate px-1 text-center text-xs text-white/70">{imageName}</p>}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function LedgerPanel({
   movementId,
@@ -286,6 +361,7 @@ function TripCard({
                     <span className="font-mono tnum">{e.at}</span> ·{" "}
                     {t.movements.handledBy} {e.handledBy}
                   </p>
+                  {e.hasImage && <LedgerImagePreview entryId={e.id} imageName={e.imageName} />}
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <span
@@ -487,6 +563,7 @@ function EditEntry({
   const [amount, setAmount] = useState(String(entry.amount));
   const [label, setLabel] = useState(entry.label ?? "");
   const [at, setAt] = useState(entry.at || today);
+  const [image, setImage] = useState<File | null>(null);
   const [pending, start] = useTransition();
   const income = type === "RECEIVED";
 
@@ -502,6 +579,7 @@ function EditEntry({
     fd.set("amount", amount);
     fd.set("label", label);
     fd.set("at", at);
+    if (image) fd.set("image", image);
     start(async () => {
       const res = await editLedgerEntry(entry.id, {}, fd);
       if (res.error) toast.error(res.error);
@@ -564,6 +642,28 @@ function EditEntry({
               placeholder={t.movements.entryLabelPlaceholder}
             />
           </div>
+          <div>
+            <Label htmlFor="editImage">
+              {entry.hasImage ? t.movements.replaceImage : t.movements.imageLabel}
+            </Label>
+            <Input
+              id="editImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+              className="cursor-pointer file:mr-3"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">{t.movements.imageHint}</p>
+            {image ? (
+              <SelectedImagePreview
+                key={`${image.name}-${image.size}-${image.lastModified}`}
+                file={image}
+                label={t.movements.imageLabel}
+              />
+            ) : entry.hasImage ? (
+              <LedgerImagePreview entryId={entry.id} imageName={entry.imageName} />
+            ) : null}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>
@@ -586,6 +686,7 @@ function AddEntry({ tripId, today }: { tripId: string; today: string }) {
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [at, setAt] = useState(today);
+  const [image, setImage] = useState<File | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [pending, start] = useTransition();
 
@@ -601,6 +702,7 @@ function AddEntry({ tripId, today }: { tripId: string; today: string }) {
     fd.set("amount", amount);
     fd.set("label", label);
     fd.set("at", at);
+    if (image) fd.set("image", image);
     start(async () => {
       const res = await addLedgerEntry(tripId, {}, fd);
       if (res.error) toast.error(res.error);
@@ -610,6 +712,7 @@ function AddEntry({ tripId, today }: { tripId: string; today: string }) {
         setAmount("");
         setLabel("");
         setKind("GENERAL");
+        setImage(null);
         setResetKey((k) => k + 1);
       }
     });
@@ -653,6 +756,28 @@ function AddEntry({ tripId, today }: { tripId: string; today: string }) {
           onChange={(e) => setLabel(e.target.value)}
           placeholder={t.movements.entryLabelPlaceholder}
         />
+      </div>
+      <div>
+        <Label htmlFor={`img-${tripId}`} className="flex items-center gap-1.5">
+          <ImageIcon className="size-4 text-muted-foreground" />
+          {t.movements.imageLabel}
+        </Label>
+        <Input
+          key={`image-${resetKey}`}
+          id={`img-${tripId}`}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+          className="cursor-pointer file:mr-3"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">{t.movements.imageHint}</p>
+        {image && (
+          <SelectedImagePreview
+            key={`${image.name}-${image.size}-${image.lastModified}`}
+            file={image}
+            label={t.movements.imageLabel}
+          />
+        )}
       </div>
       <div className="flex justify-end">
         <Button type="button" onClick={submit} disabled={pending}>

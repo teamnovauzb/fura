@@ -62,17 +62,17 @@ export default async function TruckDetailPage({
     acc[cur] += toNumber(e.amount);
     return acc;
   }, emptyPair());
-  // Truck value = starting price (so'm) + money spent on the truck − profit
+  // Truck value = starting price (USD) + money spent on the truck − profit
   // earned. Goal: reach zero (or go negative) by year end.
   const currentValue: Pair = {
-    SOM: basePrice + carSpend.SOM - profit.SOM,
-    USD: carSpend.USD - profit.USD,
+    SOM: 0,
+    USD: basePrice + carSpend.USD - profit.USD,
   };
 
   const rows: { label: string; pair: Pair; sign: string }[] = [
-    { label: t.trucks.basePrice, pair: { SOM: basePrice, USD: 0 }, sign: "" },
-    { label: t.trucks.carSpend, pair: carSpend, sign: "+" },
-    { label: t.trucks.profitEarned, pair: profit, sign: "−" },
+    { label: t.trucks.basePrice, pair: { SOM: 0, USD: basePrice }, sign: "" },
+    { label: t.trucks.carSpend, pair: { SOM: 0, USD: carSpend.USD }, sign: "+" },
+    { label: t.trucks.profitEarned, pair: { SOM: 0, USD: profit.USD }, sign: "−" },
   ];
 
   return (

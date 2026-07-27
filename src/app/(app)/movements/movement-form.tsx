@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import Image from "next/image";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,18 +35,65 @@ type Initial = {
   movedAt: string; // yyyy-mm-dd
 };
 
+function SeedImageInput({ id, name }: { id: string; name: string }) {
+  const { t } = useI18n();
+  const [file, setFile] = useState<File | null>(null);
+
+  return (
+    <div className="mt-3">
+      <Label htmlFor={id} className="flex items-center gap-1.5 text-xs">
+        <ImageIcon className="size-3.5 text-muted-foreground" />
+        {t.movements.imageLabel}
+      </Label>
+      <Input
+        id={id}
+        name={name}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+        className="cursor-pointer text-xs file:mr-2"
+      />
+      <p className="mt-1 text-[0.7rem] text-muted-foreground">{t.movements.imageHint}</p>
+      {file && <LocalImagePreview key={`${file.name}-${file.size}-${file.lastModified}`} file={file} />}
+    </div>
+  );
+}
+
+function LocalImagePreview({ file }: { file: File }) {
+  const { t } = useI18n();
+  const [url] = useState(() => URL.createObjectURL(file));
+
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+
+  return (
+    <div className="mt-2 rounded-xl border border-border bg-muted/30 p-1.5">
+      <Image
+        src={url}
+        alt={t.movements.imageLabel}
+        width={240}
+        height={150}
+        unoptimized
+        className="h-24 w-full rounded-lg object-cover"
+      />
+      <p className="mt-1 truncate px-1 text-[0.7rem] text-muted-foreground">{file.name}</p>
+    </div>
+  );
+}
+
 export function MovementForm({
   trucks,
   drivers,
   action,
   initial,
   submitLabel,
+  showImageUploads = false,
 }: {
   trucks: Option[];
   drivers: Option[];
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   initial?: Partial<Initial>;
   submitLabel: string;
+  showImageUploads?: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -152,6 +201,7 @@ export function MovementForm({
             required
           />
           <FieldError message={state.fieldErrors?.moneyGiven} />
+          {showImageUploads && <SeedImageInput id="moneyGivenImage" name="moneyGivenImage" />}
         </div>
         <div>
           <Label htmlFor="extraSpending">{t.movements.extraSpending}</Label>
@@ -163,6 +213,7 @@ export function MovementForm({
             onRaw={setExtra}
           />
           <FieldError message={state.fieldErrors?.extraSpending} />
+          {showImageUploads && <SeedImageInput id="extraSpendingImage" name="extraSpendingImage" />}
         </div>
         <div>
           <Label htmlFor="revenue">{t.movements.revenueOptional}</Label>
@@ -174,6 +225,7 @@ export function MovementForm({
             onRaw={setRevenue}
           />
           <FieldError message={state.fieldErrors?.revenue} />
+          {showImageUploads && <SeedImageInput id="revenueImage" name="revenueImage" />}
         </div>
       </div>
 

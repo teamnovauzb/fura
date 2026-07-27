@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { truckSchema } from "@/lib/validation";
 import { fieldErrorsFrom } from "@/lib/forms";
 import { getT } from "@/i18n/server";
+import { notifyOtherUsers } from "@/lib/notifications";
 
 export type ActionState = {
   ok?: boolean;
@@ -49,6 +50,12 @@ export async function createTruck(
       entity: "Truck",
       entityId: truck.id,
       after: truck,
+    });
+    await notifyOtherUsers(tx, {
+      actorId: user.id,
+      type: "TRUCK_CREATED",
+      subject: truck.name,
+      href: `/trucks/${truck.id}`,
     });
   });
 

@@ -57,6 +57,7 @@ export default async function NewMovementPage() {
           trucks={trucks}
           drivers={drivers}
           action={createTransaction}
+          showImageUploads
           initial={{ movedAt: today, moneyGiven: "", extraSpending: "" }}
           submitLabel={t.movements.submitLog}
         />

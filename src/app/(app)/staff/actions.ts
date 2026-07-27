@@ -8,6 +8,7 @@ import { writeAudit } from "@/lib/audit";
 import { newUserSchema } from "@/lib/validation";
 import { fieldErrorsFrom } from "@/lib/forms";
 import { getT } from "@/i18n/server";
+import { notifyOtherUsers } from "@/lib/notifications";
 
 export type ActionState = {
   ok?: boolean;
@@ -62,6 +63,12 @@ export async function createUser(
       entity: "User",
       entityId: user.id,
       after: safe(user),
+    });
+    await notifyOtherUsers(tx, {
+      actorId: actor.id,
+      type: "USER_CREATED",
+      subject: user.name,
+      href: "/staff",
     });
   });
 

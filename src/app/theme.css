@@ -16,14 +16,14 @@
 
 /* ---- ACTIVE PALETTE: Logistics Blue -------------------------------------- */
 :root {
-  --radius: 0.55rem;
+  --radius: 0.75rem;
 
   /* Soft blue wash blobs behind the page */
   --bg-wash-1: oklch(0.6 0.16 258 / 0.13);
   --bg-wash-2: oklch(0.7 0.1 230 / 0.1);
 
   /* Cool near-white + navy ink */
-  --background: oklch(0.985 0.006 250);
+  --background: oklch(0.978 0.007 250);
   --foreground: oklch(0.27 0.03 258);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.27 0.03 258);
@@ -44,8 +44,8 @@
 
   --destructive: oklch(0.55 0.18 27);
 
-  --border: oklch(0.9 0.014 255);
-  --input: oklch(0.9 0.014 255);
+  --border: oklch(0.91 0.012 255);
+  --input: oklch(0.89 0.014 255);
   --ring: oklch(0.6 0.2 264);
 
   /* Brand accent (active rail, road-line, lane-mark) */
@@ -62,11 +62,11 @@
   --chart-5: oklch(0.42 0.1 264);
 
   /* Sidebar = deep navy rail */
-  --sidebar: oklch(0.3 0.07 264);
+  --sidebar: oklch(0.235 0.055 264);
   --sidebar-foreground: oklch(0.83 0.03 255);
   --sidebar-primary: oklch(0.66 0.2 263);
   --sidebar-primary-foreground: oklch(0.2 0.04 264);
-  --sidebar-accent: oklch(0.37 0.06 264);
+  --sidebar-accent: oklch(0.31 0.055 264);
   --sidebar-accent-foreground: oklch(0.98 0.01 255);
   --sidebar-border: oklch(0.42 0.05 264);
   --sidebar-ring: oklch(0.66 0.2 263);

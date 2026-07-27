@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser, isSuperadmin } from "@/lib/guards";
-import { money, toNumber } from "@/lib/format";
+import { toNumber } from "@/lib/format";
 import { ledgerTotals, addPair, emptyPair, type Pair } from "@/lib/ledger";
 import { PairMoney } from "@/components/money-pair";
 import { getT } from "@/i18n/server";
@@ -42,7 +42,7 @@ export default async function TrucksPage() {
   });
 
   // Live truck value = base price + money spent on the truck − profit earned.
-  // The base price is in so'm; USD only appears via USD entries.
+  // Truck purchase/base prices are always stored and displayed in USD.
   function currentValueOf(tr: (typeof trucks)[number]): Pair {
     const carSpend = emptyPair();
     let profit = emptyPair();
@@ -55,8 +55,8 @@ export default async function TrucksPage() {
         }
     }
     return {
-      SOM: toNumber(tr.price) + carSpend.SOM - profit.SOM,
-      USD: carSpend.USD - profit.USD,
+      SOM: 0,
+      USD: toNumber(tr.price) + carSpend.USD - profit.USD,
     };
   }
 
