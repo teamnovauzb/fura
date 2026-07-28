@@ -71,19 +71,14 @@ export default async function TruckDetailPage({
     USD: basePrice + carSpend.USD - profit.USD,
   };
 
-  // Profit is subtracted from the running total, but when it's negative
-  // (the truck operated at a loss) that becomes a double negative on
-  // screen ("− -3,291"). Flip sign+magnitude so a loss reads as "+" back
-  // onto the value instead, matching what the math actually does.
-  const profitRow =
-    profit.USD >= 0
-      ? { label: t.trucks.profitEarned, pair: { SOM: 0, USD: profit.USD }, sign: "−" }
-      : { label: t.trucks.profitEarned, pair: { SOM: 0, USD: -profit.USD }, sign: "+" };
-
-  const rows: { label: string; pair: Pair; sign: string }[] = [
+  // Show profit's real signed value (colored, like everywhere else in the
+  // app) instead of wrapping it in an artificial "+"/"−" prefix - that
+  // approach either double-negates ("− -3,291") or inverts the meaning
+  // (showing "+" on a truck that's actually running at a loss).
+  const rows: { label: string; pair: Pair; sign: string; colored?: boolean }[] = [
     { label: t.trucks.basePrice, pair: { SOM: 0, USD: basePrice }, sign: "" },
     { label: t.trucks.carSpend, pair: { SOM: 0, USD: carSpend.USD }, sign: "+" },
-    profitRow,
+    { label: t.trucks.profitEarned, pair: { SOM: 0, USD: profit.USD }, sign: "", colored: true },
   ];
 
   return (
@@ -115,7 +110,7 @@ export default async function TruckDetailPage({
               <span className="eyebrow">{r.label}</span>
               <div className="flex items-start gap-1 font-mono tnum font-600">
                 {r.sign && <span className="text-muted-foreground">{r.sign}</span>}
-                <PairMoney pair={r.pair} className="text-right" />
+                <PairMoney pair={r.pair} colored={r.colored} className="text-right" />
               </div>
             </>
           );
