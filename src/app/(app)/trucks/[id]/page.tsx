@@ -69,10 +69,19 @@ export default async function TruckDetailPage({
     USD: basePrice + carSpend.USD - profit.USD,
   };
 
+  // Profit is subtracted from the running total, but when it's negative
+  // (the truck operated at a loss) that becomes a double negative on
+  // screen ("− -3,291"). Flip sign+magnitude so a loss reads as "+" back
+  // onto the value instead, matching what the math actually does.
+  const profitRow =
+    profit.USD >= 0
+      ? { label: t.trucks.profitEarned, pair: { SOM: 0, USD: profit.USD }, sign: "−" }
+      : { label: t.trucks.profitEarned, pair: { SOM: 0, USD: -profit.USD }, sign: "+" };
+
   const rows: { label: string; pair: Pair; sign: string }[] = [
     { label: t.trucks.basePrice, pair: { SOM: 0, USD: basePrice }, sign: "" },
     { label: t.trucks.carSpend, pair: { SOM: 0, USD: carSpend.USD }, sign: "+" },
-    { label: t.trucks.profitEarned, pair: { SOM: 0, USD: profit.USD }, sign: "−" },
+    profitRow,
   ];
 
   return (
@@ -92,21 +101,43 @@ export default async function TruckDetailPage({
 
       <div className="road-line" />
 
-      {/* Base price + truck spending − profit earned = current value */}
+      {/* Base price + truck spending − profit earned = current value.
+          Profit/current value are both derived from this truck's
+          movements, so clicking them jumps to the filtered movement log
+          instead of leaving people wondering where a number came from. */}
       <div className="rounded-lg border border-border bg-card overflow-hidden divide-y divide-border">
-        {rows.map((r) => (
-          <div
-            key={r.label}
-            className="flex items-center justify-between gap-4 px-4 py-2.5"
-          >
-            <span className="eyebrow">{r.label}</span>
-            <div className="flex items-start gap-1 font-mono tnum font-600">
-              {r.sign && <span className="text-muted-foreground">{r.sign}</span>}
-              <PairMoney pair={r.pair} className="text-right" />
+        {rows.map((r) => {
+          const clickable = r.label === t.trucks.profitEarned;
+          const rowContent = (
+            <>
+              <span className="eyebrow">{r.label}</span>
+              <div className="flex items-start gap-1 font-mono tnum font-600">
+                {r.sign && <span className="text-muted-foreground">{r.sign}</span>}
+                <PairMoney pair={r.pair} className="text-right" />
+              </div>
+            </>
+          );
+          return clickable ? (
+            <Link
+              key={r.label}
+              href={`/movements?truckId=${id}`}
+              className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-secondary/50 transition-colors"
+            >
+              {rowContent}
+            </Link>
+          ) : (
+            <div
+              key={r.label}
+              className="flex items-center justify-between gap-4 px-4 py-2.5"
+            >
+              {rowContent}
             </div>
-          </div>
-        ))}
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-secondary/50">
+          );
+        })}
+        <Link
+          href={`/movements?truckId=${id}`}
+          className="flex items-center justify-between gap-4 px-4 py-3 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+        >
           <span className="eyebrow text-foreground/70">
             {t.trucks.currentValue}
           </span>
@@ -114,7 +145,7 @@ export default async function TruckDetailPage({
             pair={currentValue}
             className="font-mono tnum font-800 text-lg text-right"
           />
-        </div>
+        </Link>
       </div>
 
       {/* Where the money went on this car */}

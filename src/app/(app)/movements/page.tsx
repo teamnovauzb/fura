@@ -18,12 +18,22 @@ import {
 import { MovementRow } from "./movement-row";
 import { DeleteMovementButton } from "./delete-button";
 
-export default async function MovementsPage() {
+export default async function MovementsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ truckId?: string }>;
+}) {
   const user = await requireUser();
   const superadmin = isSuperadmin(user);
   const { t } = await getT();
+  const { truckId } = await searchParams;
+
+  const filterTruck = truckId
+    ? await prisma.truck.findUnique({ where: { id: truckId } })
+    : null;
 
   const movements = await prisma.transaction.findMany({
+    where: filterTruck ? { truckId: filterTruck.id } : undefined,
     orderBy: { movedAt: "desc" },
     include: {
       truck: true,
@@ -37,7 +47,24 @@ export default async function MovementsPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">{t.movements.eyebrow}</p>
+          <p className="eyebrow">
+            {filterTruck ? (
+              <>
+                <Link href="/trucks" className="hover:text-foreground">
+                  {t.nav.trucks}
+                </Link>{" "}
+                /{" "}
+                <Link
+                  href={`/trucks/${filterTruck.id}`}
+                  className="hover:text-foreground"
+                >
+                  {filterTruck.name}
+                </Link>
+              </>
+            ) : (
+              t.movements.eyebrow
+            )}
+          </p>
           <h1 className="text-3xl font-800 mt-1">{t.movements.title}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {movements.length === 200
