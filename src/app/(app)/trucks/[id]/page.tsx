@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/guards";
+import { requireUser, isSuperadmin } from "@/lib/guards";
 import { fmtMoney, toNumber, formatDate } from "@/lib/format";
 import { ledgerTotals, addPair, emptyPair, type Pair } from "@/lib/ledger";
 import { PairMoney } from "@/components/money-pair";
@@ -15,13 +15,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MovementRow } from "../../movements/movement-row";
 
 export default async function TruckDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  const user = await requireUser();
+  const superadmin = isSuperadmin(user);
   const { t } = await getT();
   const { id } = await params;
 
@@ -40,14 +42,14 @@ export default async function TruckDetailPage({
     orderBy: { at: "desc" },
   });
 
-  // Profit earned across all of this truck's movements — it pays the truck
-  // down over the year.
+  // Every movement logged against this truck — shown as its own table below
+  // so income/expense/profit per trip is visible directly, instead of only
+  // a single blended total that mixes finished trips with ones still open.
   const movements = await prisma.transaction.findMany({
     where: { truckId: id },
-    select: {
-      moneyGiven: true,
-      extraSpending: true,
-      revenue: true,
+    orderBy: { movedAt: "desc" },
+    include: {
+      driver: { select: { name: true } },
       entries: { select: { type: true, amount: true, currency: true } },
     },
   });
@@ -197,6 +199,69 @@ export default async function TruckDetailPage({
                     </TableCell>
                   </TableRow>
                 ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+
+      {/* Every movement for this truck, broken into income/expense/profit
+          per trip — so the totals above are traceable instead of opaque,
+          and it's obvious at a glance which trips are finished vs still
+          open (open trips show spend with nothing received yet, which is
+          expected, not a loss). */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="text-lg font-700">{t.movements.title}</h2>
+        </div>
+        {movements.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            {t.movements.emptyBody}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t.common.date}</TableHead>
+                  <TableHead>{t.movements.colRoute}</TableHead>
+                  <TableHead>{t.movements.colDriver}</TableHead>
+                  <TableHead className="text-right">
+                    {t.movements.received}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t.movements.spent}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t.movements.profit}
+                  </TableHead>
+                  <TableHead>{t.movements.colStatus}</TableHead>
+                  {superadmin && (
+                    <TableHead className="text-right">
+                      {t.common.actions}
+                    </TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {movements.map((m) => {
+                  const { received, spent, profit: mProfit } = ledgerTotals(m);
+                  return (
+                    <MovementRow
+                      key={m.id}
+                      id={m.id}
+                      dateStr={formatDate(m.movedAt)}
+                      route={`${m.origin ? `${m.origin} → ` : ""}${m.destination}`}
+                      truck={truck.name}
+                      driver={m.driver.name}
+                      received={received}
+                      spent={spent}
+                      profit={mProfit}
+                      ended={m.status === "ENDED"}
+                      superadmin={superadmin}
+                    />
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
