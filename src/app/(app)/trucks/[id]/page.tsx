@@ -64,11 +64,15 @@ export default async function TruckDetailPage({
     acc[cur] += toNumber(e.amount);
     return acc;
   }, emptyPair());
-  // Truck value = starting price (USD) + money spent on the truck − profit
-  // earned. Goal: reach zero (or go negative) by year end.
+  // Truck value = starting price (USD) − profit earned. Goal: reach zero
+  // (or go negative) by year end. Car spend is NOT added again here - it's
+  // already inside `profit`, since every movement's spent/profit total
+  // includes any CAR-kind entries logged against it. Adding it a second
+  // time here double-counted every repair (a single $600 entry moved this
+  // number by $1,200).
   const currentValue: Pair = {
     SOM: 0,
-    USD: basePrice + carSpend.USD - profit.USD,
+    USD: basePrice - profit.USD,
   };
 
   // Show profit's real signed value (colored, like everywhere else in the
