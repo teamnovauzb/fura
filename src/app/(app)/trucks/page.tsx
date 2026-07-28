@@ -41,22 +41,21 @@ export default async function TrucksPage() {
     },
   });
 
-  // Live truck value = base price + money spent on the truck − profit earned.
-  // Truck purchase/base prices are always stored and displayed in USD.
+  // Live truck value = base price − profit earned. Truck purchase/base
+  // prices are always stored and displayed in USD.
+  //
+  // Note: profit already includes CAR-kind spend, since every movement's
+  // spent/profit total sums all non-RECEIVED entries regardless of kind.
+  // Do NOT add car spend again here - that double-counts every repair
+  // (previously moved this number by 2x the actual expense).
   function currentValueOf(tr: (typeof trucks)[number]): Pair {
-    const carSpend = emptyPair();
     let profit = emptyPair();
     for (const m of tr.transactions) {
       profit = addPair(profit, ledgerTotals(m).profit);
-      for (const e of m.entries)
-        if (e.type === "SPENT" && e.kind === "CAR") {
-          const cur: keyof Pair = e.currency === "USD" ? "USD" : "SOM";
-          carSpend[cur] += toNumber(e.amount);
-        }
     }
     return {
       SOM: 0,
-      USD: toNumber(tr.price) + carSpend.USD - profit.USD,
+      USD: toNumber(tr.price) - profit.USD,
     };
   }
 
