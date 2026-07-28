@@ -390,6 +390,7 @@ const en = {
     colWho: "Who",
     colAction: "Action",
     colEntity: "Entity",
+    colTruck: "Trucks",
     colChange: "Change",
   },
   notifications: {
@@ -812,6 +813,7 @@ const uz = {
     colWho: "Ким",
     colAction: "Амал",
     colEntity: "Объект",
+    colTruck: "Фуралар",
     colChange: "Ўзгариш",
   },
   notifications: {
@@ -986,7 +988,7 @@ const ru = {
     eyebrow: "Только владелец · без удаления", title: "Журнал аудита",
     subtitle: "Все создания, изменения и удаления — кто и когда их выполнил. Эти записи нельзя изменить или удалить.",
     emptyTitle: "Записей пока нет", emptyBody: "Действия сотрудников появятся здесь.", colWhen: "Когда", colWho: "Кто",
-    colAction: "Действие", colEntity: "Объект", colChange: "Изменение",
+    colAction: "Действие", colEntity: "Объект", colTruck: "Грузовики", colChange: "Изменение",
   },
   notifications: {
     title: "Уведомления", empty: "Уведомлений пока нет.", markAll: "Прочитать все",
