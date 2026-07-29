@@ -32,12 +32,9 @@ export default async function AppLayout({
       code: "05",
       badge: dueReminders || undefined,
     },
-    ...(superadmin
-      ? [
-          { href: "/staff", label: t.nav.staff, code: "06" },
-          { href: "/audit", label: t.nav.audit, code: "07" },
-        ]
-      : []),
+    ...(superadmin ? [{ href: "/staff", label: t.nav.staff, code: "06" }] : []),
+    { href: "/closed-movements", label: t.nav.closedMovements, code: "09" },
+    ...(superadmin ? [{ href: "/audit", label: t.nav.audit, code: "07" }] : []),
   ];
 
   return (
