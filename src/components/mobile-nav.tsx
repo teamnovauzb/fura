@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/components/sidebar-nav";
-import { Banknote, Bell, ChartNoAxesCombined, LayoutDashboard, ReceiptText, ScrollText, Truck, UserRound, UsersRound } from "lucide-react";
+import { Archive, Banknote, Bell, ChartNoAxesCombined, LayoutDashboard, ReceiptText, ScrollText, Truck, UserRound, UsersRound } from "lucide-react";
 
 export function MobileNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const icons = [LayoutDashboard, ReceiptText, ChartNoAxesCombined, Truck, UserRound, Bell, UsersRound, ScrollText, Banknote];
+  const icons = [LayoutDashboard, ReceiptText, ChartNoAxesCombined, Truck, UserRound, Bell, UsersRound, ScrollText, Banknote, Archive];
 
   return (
     <div className="md:hidden sticky top-16 z-30 border-b border-border/70 bg-background/85 backdrop-blur-xl overflow-x-auto scrollbar-none">

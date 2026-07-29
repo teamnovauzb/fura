@@ -29,6 +29,61 @@ export default async function AuditPage() {
     take: 300,
   });
 
+  const transactionIds = new Set<string>();
+  for (const entry of entries) {
+    const snapshot = auditSnapshot(entry.before, entry.after);
+    if (entry.entity === "Transaction" && entry.entityId)
+      transactionIds.add(entry.entityId);
+    if (typeof snapshot.transactionId === "string")
+      transactionIds.add(snapshot.transactionId);
+  }
+
+  const transactions = await prisma.transaction.findMany({
+    where: { id: { in: [...transactionIds] } },
+    select: { id: true, truckId: true },
+  });
+  const truckIdByTransaction = new Map(
+    transactions.map((transaction) => [transaction.id, transaction.truckId]),
+  );
+
+  // Audit snapshots also let deleted movements keep their truck association.
+  for (const entry of entries) {
+    if (entry.entity !== "Transaction" || !entry.entityId) continue;
+    const snapshot = auditSnapshot(entry.before, entry.after);
+    if (typeof snapshot.truckId === "string")
+      truckIdByTransaction.set(entry.entityId, snapshot.truckId);
+  }
+
+  const truckIds = new Set(truckIdByTransaction.values());
+  for (const entry of entries) {
+    const snapshot = auditSnapshot(entry.before, entry.after);
+    if (entry.entity === "Truck" && entry.entityId) truckIds.add(entry.entityId);
+    if (typeof snapshot.truckId === "string") truckIds.add(snapshot.truckId);
+  }
+
+  const trucks = await prisma.truck.findMany({
+    where: { id: { in: [...truckIds] } },
+    select: { id: true, name: true, plate: true },
+  });
+  const truckLabelById = new Map(
+    trucks.map((truck) => [truck.id, truckLabel(truck.name, truck.plate)]),
+  );
+
+  // Preserve the label for trucks that have since been deleted.
+  for (const entry of entries) {
+    if (entry.entity !== "Truck" || !entry.entityId) continue;
+    const snapshot = auditSnapshot(entry.before, entry.after);
+    if (typeof snapshot.name === "string") {
+      truckLabelById.set(
+        entry.entityId,
+        truckLabel(
+          snapshot.name,
+          typeof snapshot.plate === "string" ? snapshot.plate : null,
+        ),
+      );
+    }
+  }
+
   return (
     <div className="space-y-6">
       <header>
@@ -55,6 +110,7 @@ export default async function AuditPage() {
                 <TableHead>{t.audit.colWho}</TableHead>
                 <TableHead>{t.audit.colAction}</TableHead>
                 <TableHead>{t.audit.colEntity}</TableHead>
+                <TableHead>{t.audit.colTruck}</TableHead>
                 <TableHead>{t.audit.colChange}</TableHead>
               </TableRow>
             </TableHeader>
@@ -78,6 +134,9 @@ export default async function AuditPage() {
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {e.entity}
                   </TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">
+                    {truckForAuditEntry(e, truckIdByTransaction, truckLabelById)}
+                  </TableCell>
                   <TableCell className="max-w-xs">
                     <AuditDiff before={e.before} after={e.after} />
                   </TableCell>
@@ -89,6 +148,34 @@ export default async function AuditPage() {
       )}
     </div>
   );
+}
+
+function auditSnapshot(before: unknown, after: unknown): Record<string, unknown> {
+  return ((after ?? before ?? {}) as Record<string, unknown>);
+}
+
+function truckLabel(name: string, plate: string | null): string {
+  if (!plate) return name;
+  const number = plate.replace(/\s/g, "").match(/^\d{2}\D*(\d{3})/)?.[1] ?? plate;
+  return `${name} / ${number}`;
+}
+
+function truckForAuditEntry(
+  entry: { entity: string; entityId: string | null; before: unknown; after: unknown },
+  truckIdByTransaction: Map<string, string>,
+  truckLabelById: Map<string, string>,
+): string {
+  const snapshot = auditSnapshot(entry.before, entry.after);
+  let truckId: string | undefined;
+
+  if (entry.entity === "Truck") truckId = entry.entityId ?? undefined;
+  else if (typeof snapshot.truckId === "string") truckId = snapshot.truckId;
+  else if (entry.entity === "Transaction" && entry.entityId)
+    truckId = truckIdByTransaction.get(entry.entityId);
+  else if (typeof snapshot.transactionId === "string")
+    truckId = truckIdByTransaction.get(snapshot.transactionId);
+
+  return (truckId && truckLabelById.get(truckId)) || "—";
 }
 
 const HIDDEN = new Set(["id", "createdAt", "updatedAt", "createdById"]);

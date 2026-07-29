@@ -36,6 +36,7 @@ const en = {
     drivers: "Drivers",
     reminders: "Reminders",
     staff: "Staff",
+    closedMovements: "Closed movements",
     audit: "Audit log",
   },
   login: {
@@ -205,6 +206,11 @@ const en = {
   movements: {
     eyebrow: "Ledger",
     title: "Movements",
+    closedTitle: "Closed movements",
+    filterAll: "All movements",
+    filterClosed: "Closed only",
+    closedEmptyTitle: "No closed movements yet",
+    closedEmptyBody: "Movements appear here after they are ended.",
     subtitleCount: "{count} trips logged.",
     subtitleLatest: "Latest 200 trips logged.",
     onlyOwnerEdits: " Only the owner can edit or delete entries.",
@@ -390,6 +396,7 @@ const en = {
     colWho: "Who",
     colAction: "Action",
     colEntity: "Entity",
+    colTruck: "Trucks",
     colChange: "Change",
   },
   notifications: {
@@ -455,6 +462,7 @@ const uz = {
     drivers: "Ҳайдовчилар",
     reminders: "Эслатмалар",
     staff: "Ходимлар",
+    closedMovements: "Якунланган қатновлар",
     audit: "Аудит журнали",
   },
   login: {
@@ -625,6 +633,11 @@ const uz = {
   movements: {
     eyebrow: "Дафтар",
     title: "Қатновлар",
+    closedTitle: "Якунланган қатновлар",
+    filterAll: "Барча қатновлар",
+    filterClosed: "Фақат якунланган",
+    closedEmptyTitle: "Якунланган қатновлар ҳали йўқ",
+    closedEmptyBody: "Қатнов якунлангандан кейин шу ерда кўринади.",
     subtitleCount: "{count} та сафар қайд этилган.",
     subtitleLatest: "Сўнгги 200 та сафар қайд этилган.",
     onlyOwnerEdits: " Ёзувларни фақат эга таҳрирлаши ёки ўчириши мумкин.",
@@ -812,6 +825,7 @@ const uz = {
     colWho: "Ким",
     colAction: "Амал",
     colEntity: "Объект",
+    colTruck: "Фуралар",
     colChange: "Ўзгариш",
   },
   notifications: {
@@ -856,7 +870,7 @@ const ru = {
   nav: {
     ledger: "Журнал", dashboard: "Главная", movements: "Рейсы",
     finance: "Финансы", somKassa: "Касса сум", trucks: "Грузовики", drivers: "Водители",
-    reminders: "Напоминания", staff: "Сотрудники", audit: "Журнал аудита",
+    reminders: "Напоминания", staff: "Сотрудники", closedMovements: "Завершённые рейсы", audit: "Журнал аудита",
   },
   login: {
     tagline: "Рейсы и платежи автопарка",
@@ -928,7 +942,8 @@ const ru = {
     notFound: "Напоминание не найдено.", pickDateError: "Выберите корректную дату.",
   },
   movements: {
-    eyebrow: "Журнал", title: "Рейсы", subtitleCount: "Записано рейсов: {count}.", subtitleLatest: "Показаны последние 200 рейсов.",
+    eyebrow: "Журнал", title: "Рейсы", closedTitle: "Завершённые рейсы", filterAll: "Все рейсы", filterClosed: "Только завершённые",
+    closedEmptyTitle: "Завершённых рейсов пока нет", closedEmptyBody: "Рейсы появятся здесь после завершения.", subtitleCount: "Записано рейсов: {count}.", subtitleLatest: "Показаны последние 200 рейсов.",
     onlyOwnerEdits: " Только владелец может изменять и удалять записи.", log: "Добавить рейс", emptyTitle: "Рейсов пока нет",
     emptyBody: "Добавьте первый рейс, чтобы начать вести журнал.", colNet: "Итого", newEyebrow: "новый", editEyebrow: "изменение",
     newTitle: "Добавить рейс", editTitle: "Изменить рейс", editNote: "Изменения записываются в журнал аудита со значениями до и после.",
@@ -986,7 +1001,7 @@ const ru = {
     eyebrow: "Только владелец · без удаления", title: "Журнал аудита",
     subtitle: "Все создания, изменения и удаления — кто и когда их выполнил. Эти записи нельзя изменить или удалить.",
     emptyTitle: "Записей пока нет", emptyBody: "Действия сотрудников появятся здесь.", colWhen: "Когда", colWho: "Кто",
-    colAction: "Действие", colEntity: "Объект", colChange: "Изменение",
+    colAction: "Действие", colEntity: "Объект", colTruck: "Грузовики", colChange: "Изменение",
   },
   notifications: {
     title: "Уведомления", empty: "Уведомлений пока нет.", markAll: "Прочитать все",

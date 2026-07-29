@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Banknote, Bell, ChartNoAxesCombined, LayoutDashboard, ReceiptText, ScrollText, Truck, UserRound, UsersRound } from "lucide-react";
+import { Archive, Banknote, Bell, ChartNoAxesCombined, LayoutDashboard, ReceiptText, ScrollText, Truck, UserRound, UsersRound } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -14,7 +14,7 @@ export type NavItem = {
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const icons = [LayoutDashboard, ReceiptText, ChartNoAxesCombined, Truck, UserRound, Bell, UsersRound, ScrollText, Banknote];
+  const icons = [LayoutDashboard, ReceiptText, ChartNoAxesCombined, Truck, UserRound, Bell, UsersRound, ScrollText, Banknote, Archive];
 
   return (
     <nav className="space-y-1">
