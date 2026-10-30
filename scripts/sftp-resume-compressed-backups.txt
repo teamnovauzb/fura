@@ -1,0 +1,6 @@
+reget /root/incident-20260727T090000Z/backups/applications-recovery.tar.gz backups/incident-20260727T090000Z/applications-recovery.tar.gz
+get /root/incident-20260727T090000Z/backups/APPLICATION_COMPRESSED_SHA256SUMS backups/incident-20260727T090000Z/APPLICATION_COMPRESSED_SHA256SUMS
+get /root/incident-20260727T090000Z/backups/server-configs-secrets.tar backups/incident-20260727T090000Z/server-configs-secrets.tar
+get /root/incident-20260727T090000Z/backups/redis.rdb backups/incident-20260727T090000Z/redis.rdb
+get /root/incident-20260727T090000Z/backups/APPLICATION_SHA256SUMS backups/incident-20260727T090000Z/APPLICATION_SHA256SUMS
+bye

@@ -1,0 +1,3 @@
+get /root/incident-20260727T090000Z-evidence.tar.gz backups/incident-20260727T090000Z/incident-evidence.tar.gz
+get /root/incident-20260727T090000Z-evidence.sha256 backups/incident-20260727T090000Z/incident-evidence.sha256
+bye
